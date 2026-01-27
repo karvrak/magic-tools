@@ -1,0 +1,611 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🐉 D&D CAMPAIGN DESIGN SYSTEM - VARIABLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* === Core Campaign Colors === */
+    --background: 222 47% 11%;
+    --foreground: 36 33% 85%;
+
+    --card: 222 47% 13%;
+    --card-foreground: 36 33% 85%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 36 33% 85%;
+
+    --primary: 43 74% 46%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 36 33% 85%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 43 74% 46%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 33% 25%;
+    --input: 217 33% 17%;
+    --ring: 43 74% 46%;
+
+    --radius: 0.5rem;
+
+    /* === D&D Narrative Colors === */
+    --color-hearth-flame: #E85D04;
+    --color-ember-glow: #F48C06;
+    --color-torch-light: #FF6B35;
+    --color-candlelight: #FFE066;
+    
+    --color-arcane-purple: #7B2CBF;
+    --color-arcane-glow: #A855F7;
+    --color-divine-gold: #FFD700;
+    --color-nature-green: #2D6A4F;
+    
+    --color-blood-red: #9B2226;
+    --color-danger-crimson: #DC2626;
+    
+    /* === Surfaces === */
+    --surface-parchment: #F5E6D3;
+    --surface-parchment-dark: #E8D5B7;
+    --surface-leather: #8B4513;
+    --surface-dark-wood: #2C1810;
+    --surface-stone: #1A1A2E;
+    
+    /* === Text === */
+    --text-ink: #1A1410;
+    --text-faded-ink: #4A4035;
+    --text-gold-leaf: #D4AF37;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🏰 BASE STYLES - THE DUNGEON FOUNDATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-dungeon-900 text-parchment-200 font-body antialiased;
+    background-image: 
+      /* Subtle torch glow from corners */
+      radial-gradient(ellipse at top left, rgba(232, 93, 4, 0.03) 0%, transparent 40%),
+      radial-gradient(ellipse at top right, rgba(232, 93, 4, 0.03) 0%, transparent 40%),
+      /* Mysterious arcane glow at bottom */
+      radial-gradient(ellipse at bottom, rgba(123, 44, 191, 0.05) 0%, transparent 50%),
+      /* Gold shimmer at top */
+      radial-gradient(ellipse at top center, rgba(212, 164, 24, 0.04) 0%, transparent 40%),
+      /* Stone texture overlay */
+      url('/textures/stone-pattern.svg');
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 120px 120px;
+    min-height: 100vh;
+  }
+
+  /* Typography hierarchy - D&D style */
+  h1 {
+    @apply font-display text-gold-400;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 40px rgba(212, 164, 24, 0.2);
+  }
+
+  h2, h3, h4, h5, h6 {
+    @apply font-medieval text-gold-400;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Links with magical hover */
+  a {
+    @apply transition-all duration-300;
+  }
+
+  /* Selection color - like highlighting ancient text */
+  ::selection {
+    @apply bg-gold-500/30 text-parchment-100;
+  }
+
+  /* Focus styles - magical glow */
+  :focus-visible {
+    @apply outline-none ring-2 ring-gold-500/50 ring-offset-2 ring-offset-dungeon-900;
+  }
+
+  /* Custom scrollbar - dungeon themed */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dungeon-800;
+    border-left: 1px solid rgba(212, 164, 24, 0.1);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-dungeon-600 to-dungeon-700 rounded-full;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 10px rgba(212, 164, 24, 0.2);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gradient-to-b from-gold-700 to-gold-800;
+  }
+
+  ::-webkit-scrollbar-corner {
+    @apply bg-dungeon-800;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚔️ COMPONENT STYLES - MAGICAL ARTIFACTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* === Card Frame - Ancient Tome Style === */
+  .card-frame {
+    @apply relative rounded-lg overflow-hidden;
+    background: 
+      linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+    border: 2px solid rgba(212, 164, 24, 0.3);
+    box-shadow: 
+      0 4px 20px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(212, 164, 24, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .card-frame::before {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: 
+      radial-gradient(ellipse at top, rgba(212, 164, 24, 0.05) 0%, transparent 50%),
+      url('/textures/parchment-pattern.svg');
+    background-size: 100% 100%, 100px 100px;
+    opacity: 0.3;
+  }
+
+  /* Corner ornaments for important cards */
+  .card-frame-ornate {
+    @apply card-frame;
+  }
+
+  .card-frame-ornate::after {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background-image: 
+      url('/textures/ornament-corner.svg'),
+      url('/textures/ornament-corner.svg'),
+      url('/textures/ornament-corner.svg'),
+      url('/textures/ornament-corner.svg');
+    background-position: 
+      top left,
+      top right,
+      bottom left,
+      bottom right;
+    background-size: 40px 40px;
+    background-repeat: no-repeat;
+    transform-origin: center;
+  }
+
+  .card-frame-ornate::after {
+    /* Rotate corners appropriately */
+    --corner-tl: rotate(0deg);
+    --corner-tr: rotate(90deg);
+    --corner-bl: rotate(-90deg);
+    --corner-br: rotate(180deg);
+  }
+
+  /* === Parchment Card - Light theme for content === */
+  .card-parchment {
+    @apply relative rounded-lg overflow-hidden;
+    background: 
+      linear-gradient(180deg, #f5e6d3 0%, #e8d5b7 100%);
+    border: 2px solid #8b7355;
+    box-shadow: 
+      0 4px 15px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    color: #1A1410;
+  }
+
+  .card-parchment::before {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: url('/textures/parchment-pattern.svg');
+    background-size: 100px 100px;
+    opacity: 0.5;
+  }
+
+  /* === Button Magic - Enchanted Seal === */
+  .btn-magic {
+    @apply relative overflow-hidden font-medieval tracking-wide;
+    background: linear-gradient(180deg, #d4a418 0%, #b8860b 100%);
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-magic::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: 
+      radial-gradient(circle at center, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  }
+
+  .btn-magic:hover::before {
+    @apply opacity-100;
+  }
+
+  .btn-magic::after {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-all duration-500;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: translateX(-100%);
+  }
+
+  .btn-magic:hover::after {
+    @apply opacity-100;
+    transform: translateX(100%);
+  }
+
+  /* === Card Hover - Magical Lift === */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 
+      0 12px 40px rgba(0, 0, 0, 0.4),
+      0 0 30px rgba(212, 164, 24, 0.2);
+  }
+
+  /* === Text Effects === */
+  .text-glow {
+    text-shadow: 
+      0 0 10px rgba(212, 164, 24, 0.5),
+      0 0 20px rgba(212, 164, 24, 0.3),
+      0 0 30px rgba(212, 164, 24, 0.2);
+  }
+
+  .text-glow-arcane {
+    text-shadow: 
+      0 0 10px rgba(123, 44, 191, 0.5),
+      0 0 20px rgba(123, 44, 191, 0.3),
+      0 0 30px rgba(123, 44, 191, 0.2);
+  }
+
+  .text-glow-fire {
+    text-shadow: 
+      0 0 10px rgba(232, 93, 4, 0.5),
+      0 0 20px rgba(232, 93, 4, 0.3);
+  }
+
+  /* === Border Effects === */
+  .border-glow {
+    box-shadow: 
+      0 0 15px rgba(212, 164, 24, 0.3),
+      inset 0 0 15px rgba(212, 164, 24, 0.1);
+  }
+
+  .border-glow-arcane {
+    box-shadow: 
+      0 0 15px rgba(123, 44, 191, 0.3),
+      inset 0 0 15px rgba(123, 44, 191, 0.1);
+  }
+
+  /* === Rune Border Decoration === */
+  .rune-border {
+    @apply relative;
+  }
+
+  .rune-border::before {
+    content: '';
+    @apply absolute left-0 right-0 h-5 pointer-events-none;
+    top: -10px;
+    background: url('/textures/rune-border.svg') repeat-x center;
+    background-size: 200px 20px;
+    opacity: 0.6;
+  }
+
+  .rune-border::after {
+    content: '';
+    @apply absolute left-0 right-0 h-5 pointer-events-none;
+    bottom: -10px;
+    background: url('/textures/rune-border.svg') repeat-x center;
+    background-size: 200px 20px;
+    opacity: 0.6;
+    transform: rotate(180deg);
+  }
+
+  /* === MTG Rarity Colors === */
+  .rarity-common { 
+    @apply text-dungeon-300; 
+  }
+  .rarity-uncommon { 
+    @apply text-gray-300;
+    text-shadow: 0 0 5px rgba(192, 192, 192, 0.3);
+  }
+  .rarity-rare { 
+    @apply text-gold-400;
+    text-shadow: 0 0 8px rgba(212, 164, 24, 0.4);
+  }
+  .rarity-mythic { 
+    @apply text-dragon-500;
+    text-shadow: 0 0 10px rgba(220, 38, 38, 0.4);
+  }
+
+  /* === Loading Skeleton - Mystical Shimmer === */
+  .skeleton {
+    @apply bg-dungeon-700 rounded relative overflow-hidden;
+  }
+
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(212, 164, 24, 0.1) 50%,
+      transparent 100%
+    );
+    animation: skeleton-shimmer 2s infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* === Divider - Ancient Separator === */
+  .divider-rune {
+    @apply relative h-px bg-gradient-to-r from-transparent via-gold-600/50 to-transparent my-6;
+  }
+
+  .divider-rune::before {
+    content: '◆';
+    @apply absolute left-1/2 -translate-x-1/2 -translate-y-1/2 text-gold-600 text-sm;
+    background: hsl(var(--background));
+    padding: 0 0.5rem;
+  }
+
+  /* === Scroll Container === */
+  .scroll-container {
+    @apply relative;
+    background: url('/textures/scroll-bg.svg') no-repeat center;
+    background-size: 100% 100%;
+    padding: 2rem 3rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ✨ ANIMATIONS - MAGICAL EFFECTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  /* === Glow Pulse - Magical Item === */
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { 
+      box-shadow: 0 0 5px rgba(212, 164, 24, 0.3);
+      filter: brightness(1);
+    }
+    50% { 
+      box-shadow: 0 0 25px rgba(212, 164, 24, 0.6);
+      filter: brightness(1.1);
+    }
+  }
+
+  /* === Float - Levitation === */
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* === Torch Flicker === */
+  .animate-torch {
+    animation: torch-flicker 0.5s ease-in-out infinite;
+  }
+
+  @keyframes torch-flicker {
+    0%, 100% { opacity: 1; filter: brightness(1); }
+    25% { opacity: 0.9; filter: brightness(0.95); }
+    50% { opacity: 0.85; filter: brightness(0.9); }
+    75% { opacity: 0.95; filter: brightness(1.05); }
+  }
+
+  /* === Rune Glow Sequence === */
+  .animate-rune-glow {
+    animation: rune-glow 1.5s ease-in-out infinite;
+  }
+
+  @keyframes rune-glow {
+    0%, 100% { 
+      opacity: 0.3;
+      text-shadow: 0 0 5px transparent;
+    }
+    50% { 
+      opacity: 1;
+      text-shadow: 0 0 20px rgba(212, 164, 24, 0.8);
+    }
+  }
+
+  /* === Page Turn === */
+  .animate-page-turn {
+    animation: page-turn 0.6s ease-out forwards;
+  }
+
+  @keyframes page-turn {
+    0% { 
+      transform: perspective(1000px) rotateY(-90deg);
+      opacity: 0;
+    }
+    100% { 
+      transform: perspective(1000px) rotateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* === Seal Break (for notifications) === */
+  .animate-seal-break {
+    animation: seal-break 0.4s ease-out forwards;
+  }
+
+  @keyframes seal-break {
+    0% { 
+      transform: scale(1.3);
+      opacity: 0;
+    }
+    50% { 
+      transform: scale(0.95);
+    }
+    100% { 
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* === Dice Roll === */
+  .animate-dice-roll {
+    animation: dice-roll 1s ease-out;
+  }
+
+  @keyframes dice-roll {
+    0% { 
+      transform: rotate(0deg) scale(0.5);
+      opacity: 0;
+    }
+    50% {
+      transform: rotate(360deg) scale(1.2);
+    }
+    100% { 
+      transform: rotate(720deg) scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* === Arcane Spin (for loading) === */
+  .animate-arcane-spin {
+    animation: arcane-spin 2s linear infinite;
+  }
+
+  @keyframes arcane-spin {
+    0% { 
+      transform: rotate(0deg);
+      filter: hue-rotate(0deg);
+    }
+    100% { 
+      transform: rotate(360deg);
+      filter: hue-rotate(360deg);
+    }
+  }
+
+  /* === Fade In Up (for staggered content) === */
+  .animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+  }
+
+  @keyframes fade-in-up {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* === Shimmer (for gold elements) === */
+  .animate-shimmer {
+    animation: shimmer 3s infinite;
+    background-size: 200% 100%;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* === Utility Classes === */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* === Reduced Motion === */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-glow-pulse,
+    .animate-float,
+    .animate-torch,
+    .animate-rune-glow,
+    .animate-arcane-spin,
+    .animate-shimmer {
+      animation: none;
+    }
+
+    .animate-page-turn,
+    .animate-seal-break,
+    .animate-dice-roll,
+    .animate-fade-in-up {
+      animation-duration: 0.01ms;
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🎭 PAGE TRANSITIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+
+.page-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 300ms ease-in, transform 300ms ease-in;
+}

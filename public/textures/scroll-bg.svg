@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100" viewBox="0 0 400 100" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="scrollEdge" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5c4d3d"/>
+      <stop offset="20%" stop-color="#8b7355"/>
+      <stop offset="50%" stop-color="#f5e6d3"/>
+      <stop offset="80%" stop-color="#8b7355"/>
+      <stop offset="100%" stop-color="#5c4d3d"/>
+    </linearGradient>
+    <linearGradient id="scrollCenter" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e8d5b7"/>
+      <stop offset="50%" stop-color="#f5e6d3"/>
+      <stop offset="100%" stop-color="#e8d5b7"/>
+    </linearGradient>
+    <filter id="paperTexture">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="5" result="noise"/>
+      <feDiffuseLighting in="noise" lighting-color="#f5e6d3" surfaceScale="2">
+        <feDistantLight azimuth="45" elevation="60"/>
+      </feDiffuseLighting>
+    </filter>
+  </defs>
+  <!-- Main scroll body -->
+  <rect x="20" y="10" width="360" height="80" fill="url(#scrollCenter)" rx="2"/>
+  <!-- Left roll -->
+  <ellipse cx="20" cy="50" rx="15" ry="40" fill="url(#scrollEdge)"/>
+  <ellipse cx="20" cy="50" rx="8" ry="35" fill="#3d3228"/>
+  <!-- Right roll -->
+  <ellipse cx="380" cy="50" rx="15" ry="40" fill="url(#scrollEdge)"/>
+  <ellipse cx="380" cy="50" rx="8" ry="35" fill="#3d3228"/>
+  <!-- Subtle aging lines -->
+  <g stroke="#8b7355" stroke-width="0.5" opacity="0.2">
+    <line x1="40" y1="25" x2="360" y2="25"/>
+    <line x1="40" y1="75" x2="360" y2="75"/>
+  </g>
+</svg>

@@ -1,0 +1,125 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+// Générer un code court unique (6 caractères)
+function generateCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Sans I, O, 0, 1 pour éviter confusion
+  let code = ''
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
+// GET /api/sessions - Liste mes sessions récentes (par cookie ou autre)
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status')
+
+    const where: Record<string, unknown> = {}
+    if (status) {
+      where.status = status
+    }
+
+    // Sessions récentes (dernières 24h)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    where.createdAt = { gte: oneDayAgo }
+
+    const sessions = await prisma.gameSession.findMany({
+      where,
+      include: {
+        players: {
+          orderBy: { playerOrder: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    })
+
+    return NextResponse.json({ sessions })
+  } catch (error) {
+    console.error('Failed to fetch sessions:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch sessions' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/sessions - Créer une nouvelle session
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { 
+      name,
+      playerName, 
+      playerColor = '#D4AF37',
+      maxPlayers = 2, 
+      startingLife = 20,
+      format,
+      deckId,
+      deckName,
+    } = body
+
+    if (!playerName || typeof playerName !== 'string') {
+      return NextResponse.json(
+        { error: 'Player name is required' },
+        { status: 400 }
+      )
+    }
+
+    // Générer un code unique
+    let code = generateCode()
+    let attempts = 0
+    while (attempts < 10) {
+      const existing = await prisma.gameSession.findUnique({ where: { code } })
+      if (!existing) break
+      code = generateCode()
+      attempts++
+    }
+
+    if (attempts >= 10) {
+      return NextResponse.json(
+        { error: 'Could not generate unique code' },
+        { status: 500 }
+      )
+    }
+
+    // Créer la session avec le joueur hôte
+    const session = await prisma.gameSession.create({
+      data: {
+        code,
+        name: name || `Partie de ${playerName}`,
+        maxPlayers: Math.min(Math.max(maxPlayers, 2), 4),
+        startingLife,
+        format,
+        players: {
+          create: {
+            name: playerName,
+            color: playerColor,
+            isHost: true,
+            life: startingLife,
+            playerOrder: 1,
+            deckId,
+            deckName,
+          },
+        },
+      },
+      include: {
+        players: true,
+      },
+    })
+
+    return NextResponse.json({ 
+      session,
+      inviteUrl: `/play/${code}`,
+    }, { status: 201 })
+  } catch (error) {
+    console.error('Failed to create session:', error)
+    return NextResponse.json(
+      { error: 'Failed to create session' },
+      { status: 500 }
+    )
+  }
+}

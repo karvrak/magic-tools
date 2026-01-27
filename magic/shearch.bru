@@ -1,0 +1,25 @@
+meta {
+  name: search-gods
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://api.scryfall.com/cards/search?q=type:god game:paper&order=name
+  body: none
+  auth: none
+}
+
+params:query {
+  q: type:god game:paper
+  order: name
+}
+
+headers {
+  Accept: application/json
+}
+
+settings {
+  encodeUrl: true
+  timeout: 30000
+}

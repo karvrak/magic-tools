@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d4a418"/>
+      <stop offset="50%" stop-color="#fcd34d"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#goldGrad)" stroke-width="1.5">
+    <!-- Main corner flourish -->
+    <path d="M5,5 Q5,30 30,30 Q30,5 5,5" opacity="0.8"/>
+    <path d="M8,8 Q8,25 25,25 Q25,8 8,8" opacity="0.6"/>
+    <!-- Inner detail -->
+    <circle cx="15" cy="15" r="3" fill="url(#goldGrad)" opacity="0.7"/>
+    <!-- Extending lines -->
+    <path d="M30,30 L55,30" stroke-dasharray="3,2" opacity="0.5"/>
+    <path d="M30,30 L30,55" stroke-dasharray="3,2" opacity="0.5"/>
+  </g>
+</svg>

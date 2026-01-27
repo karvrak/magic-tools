@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "magic",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="20" viewBox="0 0 200 20">
+  <defs>
+    <linearGradient id="runeGold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b8860b" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#d4a418" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#b8860b" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+  <!-- Center line -->
+  <line x1="0" y1="10" x2="200" y2="10" stroke="url(#runeGold)" stroke-width="1"/>
+  <!-- Rune symbols -->
+  <g fill="none" stroke="#d4a418" stroke-width="1" opacity="0.6">
+    <!-- ᚠ Fehu -->
+    <path d="M20,5 L20,15 M20,5 L28,8 M20,10 L26,12"/>
+    <!-- ᚢ Uruz -->
+    <path d="M50,5 L50,15 L58,15 L58,5"/>
+    <!-- ᚦ Thurisaz -->
+    <path d="M80,5 L80,15 M80,8 L88,10 L80,12"/>
+    <!-- ᚨ Ansuz -->
+    <path d="M110,15 L115,5 L120,15 M112,11 L118,11"/>
+    <!-- ᚱ Raido -->
+    <path d="M140,5 L140,15 M140,5 L148,5 L148,10 L140,10 M140,10 L148,15"/>
+    <!-- ᚲ Kenaz -->
+    <path d="M170,5 L178,10 L170,15"/>
+  </g>
+  <!-- End diamonds -->
+  <polygon points="5,10 10,5 15,10 10,15" fill="#d4a418" opacity="0.5"/>
+  <polygon points="185,10 190,5 195,10 190,15" fill="#d4a418" opacity="0.5"/>
+</svg>

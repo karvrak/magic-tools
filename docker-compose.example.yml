@@ -1,0 +1,41 @@
+# Example Docker Compose configuration
+# Copy this file to docker-compose.yml and adjust values for your environment
+
+services:
+  app:
+    build: .
+    container_name: magic-tools
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NODE_ENV=production
+      - AUTH_PASSWORD=${AUTH_PASSWORD}
+      - XAI_API_KEY=${XAI_API_KEY}
+      - NODE_OPTIONS=--max-old-space-size=4096
+    ports:
+      - "3000:3000"
+    # Uncomment and configure for Traefik reverse proxy:
+    # networks:
+    #   - traefik_web
+    #   - database_network
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.docker.network=traefik_web"
+    #   - "traefik.http.routers.magictools.rule=Host(`your-domain.example.com`)"
+    #   - "traefik.http.routers.magictools.entrypoints=websecure"
+    #   - "traefik.http.routers.magictools.tls=true"
+    #   - "traefik.http.routers.magictools.tls.certresolver=mytlschallenge"
+    #   - "traefik.http.services.magictools.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://0.0.0.0:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Uncomment for external networks (Traefik, database, etc.)
+# networks:
+#   traefik_web:
+#     external: true
+#   database_network:
+#     external: true

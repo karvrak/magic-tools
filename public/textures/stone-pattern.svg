@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <pattern id="stoneCracks" patternUnits="userSpaceOnUse" width="120" height="120">
+      <rect width="120" height="120" fill="transparent"/>
+      <path d="M10,0 L15,20 L5,40 L20,60 L10,80 L25,100 L15,120" stroke="#1a1a2e" stroke-width="0.5" fill="none" opacity="0.3"/>
+      <path d="M50,0 L45,30 L55,50 L40,70 L60,90 L45,120" stroke="#1a1a2e" stroke-width="0.5" fill="none" opacity="0.3"/>
+      <path d="M90,0 L100,25 L85,45 L95,75 L80,100 L95,120" stroke="#1a1a2e" stroke-width="0.5" fill="none" opacity="0.3"/>
+      <path d="M0,30 L30,35 L60,25 L90,40 L120,30" stroke="#1a1a2e" stroke-width="0.5" fill="none" opacity="0.2"/>
+      <path d="M0,70 L40,65 L70,80 L100,70 L120,75" stroke="#1a1a2e" stroke-width="0.5" fill="none" opacity="0.2"/>
+    </pattern>
+  </defs>
+  <rect width="120" height="120" fill="url(#stoneCracks)"/>
+</svg>
