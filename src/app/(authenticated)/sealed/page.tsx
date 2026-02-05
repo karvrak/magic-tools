@@ -87,8 +87,8 @@ const RARITY_ORDER = ['mythic', 'rare', 'uncommon', 'common']
 const COLOR_ORDER = ['W', 'U', 'B', 'R', 'G', 'multicolor', 'colorless']
 
 const SORT_OPTIONS = [
-  { key: 'rarity', label: 'Rareté' },
-  { key: 'color', label: 'Couleur' },
+  { key: 'rarity', label: 'Rarity' },
+  { key: 'color', label: 'Color' },
   { key: 'cmc', label: 'CMC' },
   { key: 'type', label: 'Type' },
 ] as const
@@ -467,7 +467,7 @@ export default function SealedPage() {
                 }}
               >
                 <RotateCcw className="w-4 h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Nouveau</span>
+                <span className="hidden sm:inline">New</span>
               </Button>
             </div>
           )}
@@ -476,7 +476,7 @@ export default function SealedPage() {
         {/* Sort buttons - only when pool exists */}
         {generatedPool && !showBoosterAnimation && (
           <div className="flex items-center gap-1 mt-3 overflow-x-auto pb-1">
-            <span className="text-parchment-500 text-xs mr-1 flex-shrink-0">Trier:</span>
+            <span className="text-parchment-500 text-xs mr-1 flex-shrink-0">Sort:</span>
             {SORT_OPTIONS.map(({ key, label }) => (
               <button
                 key={key}
@@ -506,19 +506,19 @@ export default function SealedPage() {
             >
               <BookOpen className="w-5 h-5 text-emerald-400" />
               <div className="flex-1">
-                <p className="text-emerald-400 font-medium text-sm">Sealed avec ta collection</p>
-                <p className="text-parchment-500 text-xs">Ouvre des boosters avec tes propres cartes</p>
+                <p className="text-emerald-400 font-medium text-sm">Sealed with your collection</p>
+                <p className="text-parchment-500 text-xs">Open boosters with your own cards</p>
               </div>
               <ArrowRight className="w-4 h-4 text-emerald-400" />
             </Link>
 
-            <h2 className="font-medieval text-lg text-gold-400 mb-4">Simulateur de Sealed</h2>
-            <p className="text-parchment-500 text-sm mb-4">Simule l'ouverture de boosters de n'importe quel set.</p>
+            <h2 className="font-medieval text-lg text-gold-400 mb-4">Sealed Simulator</h2>
+            <p className="text-parchment-500 text-sm mb-4">Simulate opening boosters from any set.</p>
 
             {setsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Sparkles className="w-6 h-6 text-gold-400 animate-pulse" />
-                <span className="ml-2 text-parchment-400">Chargement...</span>
+                <span className="ml-2 text-parchment-400">Loading...</span>
               </div>
             ) : (
               <>
@@ -527,7 +527,7 @@ export default function SealedPage() {
                   onChange={(e) => setSelectedSet(e.target.value)}
                   className="w-full bg-dungeon-800 border border-dungeon-600 rounded-lg px-3 py-3 text-parchment-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 mb-4"
                 >
-                  <option value="">-- Sélectionne --</option>
+                  <option value="">-- Select --</option>
                   {setsData?.sets.map((set) => (
                     <option key={set.setCode} value={set.setCode}>
                       {set.setName} ({set.setCode.toUpperCase()})
@@ -543,12 +543,12 @@ export default function SealedPage() {
                   {generateMutation.isPending ? (
                     <>
                       <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-                      Ouverture...
+                      Opening...
                     </>
                   ) : (
                     <>
                       <Package className="w-5 h-5 mr-2" />
-                      Ouvrir 6 Boosters
+                      Open 6 Boosters
                     </>
                   )}
                 </Button>
@@ -618,7 +618,7 @@ export default function SealedPage() {
                   className="flex-1"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />
-                  Préc.
+                  Prev.
                 </Button>
 
                 {currentBoosterIndex < 5 ? (
@@ -626,7 +626,7 @@ export default function SealedPage() {
                     onClick={() => setCurrentBoosterIndex(prev => prev + 1)}
                     className="flex-1 btn-primary"
                   >
-                    Suiv.
+                    Next
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 ) : (
@@ -635,7 +635,7 @@ export default function SealedPage() {
                     className="flex-1 btn-primary"
                   >
                     <Layers className="w-4 h-4 mr-1" />
-                    Construire
+                    Build
                   </Button>
                 )}
               </div>
@@ -644,7 +644,7 @@ export default function SealedPage() {
                 onClick={() => setShowBoosterAnimation(false)}
                 className="block mx-auto mt-3 text-parchment-500 text-sm underline"
               >
-                Passer
+                Skip
               </button>
             </div>
           </div>
@@ -657,7 +657,7 @@ export default function SealedPage() {
             <div>
               {/* Stats bar */}
               <div className="flex items-center gap-3 text-xs text-parchment-400 mb-3 flex-wrap">
-                <span>{generatedPool.pool.length} cartes</span>
+                <span>{generatedPool.pool.length} cards</span>
                 <span className="text-orange-400">{generatedPool.stats.mythics}M</span>
                 <span className="text-yellow-400">{generatedPool.stats.rares}R</span>
                 <span className="text-gray-300">{generatedPool.stats.uncommons}U</span>
@@ -755,7 +755,7 @@ export default function SealedPage() {
               className="w-full btn-primary"
             >
               <ChevronUp className="w-5 h-5 mr-2" />
-              Retour au pool
+              Back to pool
             </Button>
           </div>
         </div>
@@ -808,9 +808,9 @@ function DeckPanel({
           : "bg-yellow-900/30 text-yellow-400"
       )}>
         {deckSize >= 40 ? (
-          <>Deck valide ({deckSize} cartes)</>
+          <>Valid deck ({deckSize} cards)</>
         ) : (
-          <>Il manque {40 - deckSize} cartes</>
+          <>{40 - deckSize} cards missing</>
         )}
       </div>
 
@@ -818,15 +818,15 @@ function DeckPanel({
       <div className="grid grid-cols-3 gap-2 text-sm">
         <div className="bg-dungeon-700 rounded p-2 text-center">
           <div className="text-gold-400 font-bold">{deckStats.lands}</div>
-          <div className="text-parchment-500 text-xs">Terrains</div>
+          <div className="text-parchment-500 text-xs">Lands</div>
         </div>
         <div className="bg-dungeon-700 rounded p-2 text-center">
           <div className="text-gold-400 font-bold">{deckStats.nonLands}</div>
-          <div className="text-parchment-500 text-xs">Sorts</div>
+          <div className="text-parchment-500 text-xs">Spells</div>
         </div>
         <div className="bg-dungeon-700 rounded p-2 text-center">
           <div className="text-gold-400 font-bold">{deckStats.avgCMC.toFixed(1)}</div>
-          <div className="text-parchment-500 text-xs">CMC moy.</div>
+          <div className="text-parchment-500 text-xs">Avg CMC</div>
         </div>
       </div>
 
@@ -862,7 +862,7 @@ function DeckPanel({
       )}>
         {deckCards.length === 0 ? (
           <p className="text-parchment-500 text-center py-6 text-sm">
-            Ajoute des cartes depuis le pool
+            Add cards from the pool
           </p>
         ) : (
           <div className="overflow-y-auto max-h-full divide-y divide-dungeon-700">
@@ -907,7 +907,7 @@ function DeckPanel({
           className="flex-1"
         >
           <RotateCcw className="w-4 h-4 mr-1" />
-          Vider
+          Clear
         </Button>
         <Button
           variant="outline"
@@ -925,7 +925,7 @@ function DeckPanel({
       {deckSize >= 40 && (
         <Button className="w-full btn-primary" disabled>
           <Play className="w-4 h-4 mr-2" />
-          Tester (bientôt)
+          Test (coming soon)
         </Button>
       )}
     </div>

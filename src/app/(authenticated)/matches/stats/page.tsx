@@ -147,12 +147,12 @@ export default function MatchStatsPage() {
             className="inline-flex items-center gap-2 text-parchment-400 hover:text-gold-400 mb-8"
           >
             <ChevronLeft className="w-4 h-4" />
-            Retour aux parties
+            Back to matches
           </Link>
           <div className="text-center py-16">
             <Swords className="w-16 h-16 mx-auto mb-4 text-parchment-600" />
-            <h1 className="text-2xl font-cinzel text-parchment-300">Aucune donnee</h1>
-            <p className="text-parchment-500 mt-2">Importe des parties pour voir les statistiques</p>
+            <h1 className="text-2xl font-cinzel text-parchment-300">No data</h1>
+            <p className="text-parchment-500 mt-2">Import matches to see statistics</p>
           </div>
         </div>
       </div>
@@ -194,10 +194,10 @@ export default function MatchStatsPage() {
               className="inline-flex items-center gap-2 text-parchment-400 hover:text-gold-400 mb-2"
             >
               <ChevronLeft className="w-4 h-4" />
-              Retour aux parties
+              Back to matches
             </Link>
             <h1 className="text-3xl font-cinzel font-bold text-gold-400">
-              Statistiques
+              Statistics
             </h1>
           </div>
         </div>
@@ -206,19 +206,19 @@ export default function MatchStatsPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
           <StatCard
             icon={<Swords className="w-6 h-6" />}
-            label="Parties"
+            label="Matches"
             value={data.totalMatches.toLocaleString()}
             color="gold"
           />
           <StatCard
             icon={<Target className="w-6 h-6" />}
-            label="Manches"
+            label="Games"
             value={data.totalGames.toLocaleString()}
             color="arcane"
           />
           <StatCard
             icon={<Users className="w-6 h-6" />}
-            label="Decks uniques"
+            label="Unique Decks"
             value={data.uniqueDecks}
             color="nature"
           />
@@ -253,7 +253,7 @@ export default function MatchStatsPage() {
                 <div>
                   <p className="text-parchment-500 text-sm">Nemesis</p>
                   <p className="text-parchment-200 font-medium">{data.globalStats.mostCommonOpponent.name}</p>
-                  <p className="text-parchment-500 text-xs">{data.globalStats.mostCommonOpponent.matches} affrontements</p>
+                  <p className="text-parchment-500 text-xs">{data.globalStats.mostCommonOpponent.matches} encounters</p>
                 </div>
               </div>
             </div>
@@ -265,11 +265,11 @@ export default function MatchStatsPage() {
                   <Flame className="w-5 h-5 text-gold-400" />
                 </div>
                 <div>
-                  <p className="text-parchment-500 text-sm">Rivalite legendaire</p>
+                  <p className="text-parchment-500 text-sm">Legendary Rivalry</p>
                   <p className="text-parchment-200 font-medium text-sm">
                     {data.globalStats.topRivalry.deck1} vs {data.globalStats.topRivalry.deck2}
                   </p>
-                  <p className="text-parchment-500 text-xs">{data.globalStats.topRivalry.matches} combats</p>
+                  <p className="text-parchment-500 text-xs">{data.globalStats.topRivalry.matches} battles</p>
                 </div>
               </div>
             </div>
@@ -280,10 +280,10 @@ export default function MatchStatsPage() {
                 <Calendar className="w-5 h-5 text-nature-400" />
               </div>
               <div>
-                <p className="text-parchment-500 text-sm">Jour prefere</p>
+                <p className="text-parchment-500 text-sm">Favorite Day</p>
                 <p className="text-parchment-200 font-medium">{data.globalStats.mostPlayedDay}</p>
                 <p className="text-parchment-500 text-xs">
-                  Record: {data.globalStats.longestSession} parties en 1 jour
+                  Record: {data.globalStats.longestSession} matches in 1 day
                 </p>
               </div>
             </div>
@@ -302,7 +302,7 @@ export default function MatchStatsPage() {
                   : 'text-parchment-500 hover:text-parchment-300'
               }`}
             >
-              {tab === 'overview' && 'Vue d\'ensemble'}
+              {tab === 'overview' && 'Overview'}
               {tab === 'decks' && 'Decks'}
               {tab === 'matchups' && 'Matchups'}
               {tab === 'timeline' && 'Timeline'}
@@ -324,7 +324,7 @@ export default function MatchStatsPage() {
               <div className="bg-dungeon-800/80 border border-dungeon-700 rounded-xl p-6">
                 <h3 className="text-lg font-cinzel text-gold-400 mb-4 flex items-center gap-2">
                   <Crown className="w-5 h-5" />
-                  Meilleurs Win Rates (min 10 parties)
+                  Best Win Rates (min 10 matches)
                 </h3>
                 <div className="space-y-3">
                   {topDecks.map((deck, i) => (
@@ -338,7 +338,7 @@ export default function MatchStatsPage() {
                         <p className="text-parchment-200 truncate">{deck.name}</p>
                         <div className="flex items-center gap-2 text-xs text-parchment-500">
                           <span>{deck.wins}W - {deck.losses}L</span>
-                          <span>({deck.totalMatches} parties)</span>
+                          <span>({deck.totalMatches} matches)</span>
                         </div>
                       </div>
                       <span className={`font-bold ${
@@ -355,7 +355,7 @@ export default function MatchStatsPage() {
               <div className="bg-dungeon-800/80 border border-dungeon-700 rounded-xl p-6">
                 <h3 className="text-lg font-cinzel text-gold-400 mb-4 flex items-center gap-2">
                   <Medal className="w-5 h-5" />
-                  Plus joues
+                  Most Played
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={mostPlayedDecks} layout="vertical">
@@ -374,7 +374,7 @@ export default function MatchStatsPage() {
               {/* Win Rate Distribution */}
               <div className="bg-dungeon-800/80 border border-dungeon-700 rounded-xl p-6">
                 <h3 className="text-lg font-cinzel text-gold-400 mb-4">
-                  Distribution des Win Rates
+                  Win Rate Distribution
                 </h3>
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
@@ -402,13 +402,13 @@ export default function MatchStatsPage() {
               {/* Hot & Cold Streaks */}
               <div className="bg-dungeon-800/80 border border-dungeon-700 rounded-xl p-6">
                 <h3 className="text-lg font-cinzel text-gold-400 mb-4">
-                  Streaks memorables
+                  Memorable Streaks
                 </h3>
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center gap-2 text-nature-400 mb-2">
                       <Flame className="w-4 h-4" />
-                      <span className="text-sm font-medium">Meilleures series de victoires</span>
+                      <span className="text-sm font-medium">Best win streaks</span>
                     </div>
                     <div className="space-y-2">
                       {data.deckStats
@@ -418,7 +418,7 @@ export default function MatchStatsPage() {
                         .map(deck => (
                           <div key={deck.name} className="flex items-center justify-between text-sm">
                             <span className="text-parchment-300">{deck.name}</span>
-                            <span className="text-nature-400 font-bold">{deck.bestWinStreak} victoires</span>
+                            <span className="text-nature-400 font-bold">{deck.bestWinStreak} wins</span>
                           </div>
                         ))}
                     </div>
@@ -426,7 +426,7 @@ export default function MatchStatsPage() {
                   <div>
                     <div className="flex items-center gap-2 text-dragon-400 mb-2">
                       <Snowflake className="w-4 h-4" />
-                      <span className="text-sm font-medium">Pires series de defaites</span>
+                      <span className="text-sm font-medium">Worst lose streaks</span>
                     </div>
                     <div className="space-y-2">
                       {data.deckStats
@@ -436,7 +436,7 @@ export default function MatchStatsPage() {
                         .map(deck => (
                           <div key={deck.name} className="flex items-center justify-between text-sm">
                             <span className="text-parchment-300">{deck.name}</span>
-                            <span className="text-dragon-400 font-bold">{deck.worstLoseStreak} defaites</span>
+                            <span className="text-dragon-400 font-bold">{deck.worstLoseStreak} losses</span>
                           </div>
                         ))}
                     </div>
@@ -460,7 +460,7 @@ export default function MatchStatsPage() {
                   type="text"
                   value={deckSearch}
                   onChange={(e) => setDeckSearch(e.target.value)}
-                  placeholder="Rechercher un deck..."
+                  placeholder="Search a deck..."
                   className="w-full pl-10 pr-4 py-2 bg-dungeon-800 border border-dungeon-600 rounded-lg text-parchment-200 placeholder-parchment-600 focus:outline-none focus:border-gold-500"
                 />
               </div>
@@ -489,7 +489,7 @@ export default function MatchStatsPage() {
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-parchment-500 mb-3">
-                      <span>{deck.totalMatches} parties</span>
+                      <span>{deck.totalMatches} matches</span>
                       <span className="text-nature-400">{deck.wins}W</span>
                       <span className="text-dragon-400">{deck.losses}L</span>
                     </div>
@@ -518,9 +518,9 @@ export default function MatchStatsPage() {
                         deck.currentStreak > 0 ? 'text-nature-400' : 'text-dragon-400'
                       }`}>
                         {deck.currentStreak > 0 ? (
-                          <><TrendingUp className="w-3 h-3" /> {deck.currentStreak} victoires d&apos;affilee</>
+                          <><TrendingUp className="w-3 h-3" /> {deck.currentStreak} wins in a row</>
                         ) : (
-                          <><TrendingDown className="w-3 h-3" /> {Math.abs(deck.currentStreak)} defaites d&apos;affilee</>
+                          <><TrendingDown className="w-3 h-3" /> {Math.abs(deck.currentStreak)} losses in a row</>
                         )}
                       </div>
                     )}
@@ -541,15 +541,15 @@ export default function MatchStatsPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                       <div className="text-center p-3 bg-dungeon-900/50 rounded-lg">
                         <p className="text-2xl font-bold text-parchment-200">{selectedDeckData.totalMatches}</p>
-                        <p className="text-xs text-parchment-500">Parties</p>
+                        <p className="text-xs text-parchment-500">Matches</p>
                       </div>
                       <div className="text-center p-3 bg-dungeon-900/50 rounded-lg">
                         <p className="text-2xl font-bold text-nature-400">{selectedDeckData.wins}</p>
-                        <p className="text-xs text-parchment-500">Victoires</p>
+                        <p className="text-xs text-parchment-500">Wins</p>
                       </div>
                       <div className="text-center p-3 bg-dungeon-900/50 rounded-lg">
                         <p className="text-2xl font-bold text-dragon-400">{selectedDeckData.losses}</p>
-                        <p className="text-xs text-parchment-500">Defaites</p>
+                        <p className="text-xs text-parchment-500">Losses</p>
                       </div>
                       <div className="text-center p-3 bg-dungeon-900/50 rounded-lg">
                         <p className={`text-2xl font-bold ${
@@ -567,11 +567,11 @@ export default function MatchStatsPage() {
                         <div className="p-4 bg-nature-900/20 border border-nature-700/50 rounded-lg">
                           <div className="flex items-center gap-2 text-nature-400 mb-2">
                             <ArrowUp className="w-4 h-4" />
-                            <span className="font-medium">Meilleur matchup</span>
+                            <span className="font-medium">Best matchup</span>
                           </div>
                           <p className="text-parchment-200">{selectedDeckData.bestMatchup.opponent}</p>
                           <p className="text-sm text-parchment-500">
-                            {selectedDeckData.bestMatchup.winRate.toFixed(0)}% ({selectedDeckData.bestMatchup.matches} parties)
+                            {selectedDeckData.bestMatchup.winRate.toFixed(0)}% ({selectedDeckData.bestMatchup.matches} matches)
                           </p>
                         </div>
                       )}
@@ -581,11 +581,11 @@ export default function MatchStatsPage() {
                         <div className="p-4 bg-dragon-900/20 border border-dragon-700/50 rounded-lg">
                           <div className="flex items-center gap-2 text-dragon-400 mb-2">
                             <ArrowDown className="w-4 h-4" />
-                            <span className="font-medium">Pire matchup</span>
+                            <span className="font-medium">Worst matchup</span>
                           </div>
                           <p className="text-parchment-200">{selectedDeckData.worstMatchup.opponent}</p>
                           <p className="text-sm text-parchment-500">
-                            {selectedDeckData.worstMatchup.winRate.toFixed(0)}% ({selectedDeckData.worstMatchup.matches} parties)
+                            {selectedDeckData.worstMatchup.winRate.toFixed(0)}% ({selectedDeckData.worstMatchup.matches} matches)
                           </p>
                         </div>
                       )}
@@ -603,7 +603,7 @@ export default function MatchStatsPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <p className="text-parchment-500 mb-4">Matchups avec au moins 3 parties</p>
+              <p className="text-parchment-500 mb-4">Matchups with at least 3 matches</p>
               <div className="space-y-2">
                 {data.matchups.map((matchup, i) => (
                   <div
@@ -644,7 +644,7 @@ export default function MatchStatsPage() {
                       </div>
 
                       <span className="text-parchment-500 text-sm w-20 text-right">
-                        {matchup.totalMatches} parties
+                        {matchup.totalMatches} matches
                       </span>
                     </div>
 
@@ -671,7 +671,7 @@ export default function MatchStatsPage() {
             >
               {/* Matches over time */}
               <div className="bg-dungeon-800/80 border border-dungeon-700 rounded-xl p-6">
-                <h3 className="text-lg font-cinzel text-gold-400 mb-4">Activite par mois</h3>
+                <h3 className="text-lg font-cinzel text-gold-400 mb-4">Monthly Activity</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={data.timeline}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -681,14 +681,14 @@ export default function MatchStatsPage() {
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
                       labelStyle={{ color: '#D4AF37' }}
                     />
-                    <Bar dataKey="matches" fill="#D4AF37" name="Parties" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="matches" fill="#D4AF37" name="Matches" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
               {/* Win Rate over time */}
               <div className="bg-dungeon-800/80 border border-dungeon-700 rounded-xl p-6">
-                <h3 className="text-lg font-cinzel text-gold-400 mb-4">Evolution du Win Rate</h3>
+                <h3 className="text-lg font-cinzel text-gold-400 mb-4">Win Rate Evolution</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={data.timeline}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />

@@ -92,7 +92,7 @@ interface Deck {
   totalPrice: number
   minTotalPrice: number // cheapest version of each card
   owner: Owner | null
-  tags: Tag[] // tags du deck
+  tags: Tag[] // deck's tags
   coverImage: string | null
   createdAt: string
   updatedAt: string
@@ -388,7 +388,7 @@ function CardNameAutocomplete({
   )
 }
 
-// Couleurs prédéfinies pour les nouveaux propriétaires
+// Predefined colors for new owners
 const OWNER_COLORS = [
   { name: 'Gold', value: '#D4AF37' },
   { name: 'Arcane Purple', value: '#8B5CF6' },
@@ -518,7 +518,7 @@ export default function DecksPage() {
       if (!response.ok) throw new Error('Failed to fetch decks')
       return response.json()
     },
-    staleTime: 0, // Toujours refetch quand le filtre change
+    staleTime: 0, // Always refetch when filter changes
   })
 
   // Create deck mutation
@@ -920,7 +920,7 @@ export default function DecksPage() {
                       <span style={{ color: activeOwner.color }}>{activeOwner.name}</span>
                     </span>
                   ) : (
-                    <span className="text-gold-400">Tous les utilisateurs</span>
+                    <span className="text-gold-400">All users</span>
                   )}
                 </span>
               </div>
@@ -1144,7 +1144,7 @@ export default function DecksPage() {
                 <span className="text-xs font-medium">Tags:</span>
               </div>
               
-              {/* Liste des tags existants */}
+              {/* List of existing tags */}
               {tagsData?.tags && tagsData.tags.length > 0 ? (
                 <div className="flex items-center gap-1 flex-wrap">
                   {tagsData.tags.map((tag) => {
@@ -1178,7 +1178,7 @@ export default function DecksPage() {
                   })}
                 </div>
               ) : (
-                <span className="text-xs text-dungeon-500 italic">Aucun tag</span>
+                <span className="text-xs text-dungeon-500 italic">No tags</span>
               )}
             </div>
             
@@ -1362,11 +1362,11 @@ export default function DecksPage() {
                         </p>
                         <p className="text-sm font-semibold flex items-center gap-1">
                           <Coins className="w-3 h-3 text-gold-500" />
-                          <span className="text-emerald-400" title="Prix minimum">
+                          <span className="text-emerald-400" title="Minimum price">
                             {formatPrice(deck.minTotalPrice, 'EUR')}
                           </span>
                           <span className="text-dungeon-500">/</span>
-                          <span className="text-gold-500" title="Prix réel">
+                          <span className="text-gold-500" title="Actual price">
                             {formatPrice(deck.totalPrice, 'EUR')}
                           </span>
                         </p>
@@ -1650,11 +1650,11 @@ export default function DecksPage() {
 
                   {/* Price */}
                   <div className="text-right text-sm font-semibold flex items-center justify-end gap-1">
-                    <span className="text-emerald-400" title="Prix minimum">
+                    <span className="text-emerald-400" title="Minimum price">
                       {formatPrice(deck.minTotalPrice, 'EUR')}
                     </span>
                     <span className="text-dungeon-500">/</span>
-                    <span className="text-gold-500" title="Prix réel">
+                    <span className="text-gold-500" title="Actual price">
                       {formatPrice(deck.totalPrice, 'EUR')}
                     </span>
                   </div>

@@ -51,12 +51,12 @@ interface GameSession {
 }
 
 const PLAYER_COLORS = [
-  { value: '#D4AF37', label: 'Or', class: 'bg-yellow-500' },
-  { value: '#3B82F6', label: 'Bleu', class: 'bg-blue-500' },
-  { value: '#EF4444', label: 'Rouge', class: 'bg-red-500' },
-  { value: '#22C55E', label: 'Vert', class: 'bg-green-500' },
-  { value: '#A855F7', label: 'Violet', class: 'bg-purple-500' },
-  { value: '#EC4899', label: 'Rose', class: 'bg-pink-500' },
+  { value: '#D4AF37', label: 'Gold', class: 'bg-yellow-500' },
+  { value: '#3B82F6', label: 'Blue', class: 'bg-blue-500' },
+  { value: '#EF4444', label: 'Red', class: 'bg-red-500' },
+  { value: '#22C55E', label: 'Green', class: 'bg-green-500' },
+  { value: '#A855F7', label: 'Purple', class: 'bg-purple-500' },
+  { value: '#EC4899', label: 'Pink', class: 'bg-pink-500' },
 ]
 
 export default function PlayPage() {
@@ -119,15 +119,15 @@ export default function PlayPage() {
     },
     onSuccess: (data) => {
       toast({
-        title: '🎮 Session créée !',
+        title: 'Session created!',
         description: `Code: ${data.session.code}`,
       })
       router.push(`/play/${data.session.code}?playerId=${data.session.players[0].id}`)
     },
     onError: () => {
       toast({
-        title: 'Erreur',
-        description: 'Impossible de créer la session',
+        title: 'Error',
+        description: 'Unable to create session',
         variant: 'destructive',
       })
     },
@@ -156,14 +156,14 @@ export default function PlayPage() {
     },
     onSuccess: (data) => {
       toast({
-        title: '🎮 Rejoint !',
-        description: `Partie de ${data.session.name}`,
+        title: 'Joined!',
+        description: `Game: ${data.session.name}`,
       })
       router.push(`/play/${data.session.code}?playerId=${data.player.id}`)
     },
     onError: (error: Error) => {
       toast({
-        title: 'Erreur',
+        title: 'Error',
         description: error.message,
         variant: 'destructive',
       })
@@ -172,7 +172,7 @@ export default function PlayPage() {
 
   const handleCreate = () => {
     if (!playerName.trim()) {
-      toast({ title: 'Erreur', description: 'Entrez votre nom', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Enter your name', variant: 'destructive' })
       return
     }
     createMutation.mutate()
@@ -180,7 +180,7 @@ export default function PlayPage() {
 
   const handleJoin = () => {
     if (!joinCode.trim() || !joinName.trim()) {
-      toast({ title: 'Erreur', description: 'Code et nom requis', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Code and name required', variant: 'destructive' })
       return
     }
     joinMutation.mutate()
@@ -192,10 +192,10 @@ export default function PlayPage() {
       <div className="text-center">
         <h1 className="font-medieval text-3xl text-gold-400 mb-2 flex items-center justify-center gap-3">
           <Swords className="w-8 h-8" />
-          Mode Multijoueur
+          Multiplayer Mode
         </h1>
         <p className="text-parchment-400">
-          Créez une session et invitez vos amis à jouer
+          Create a session and invite your friends to play
         </p>
       </div>
 
@@ -204,23 +204,23 @@ export default function PlayPage() {
         <div className="card-frame p-6">
           <h2 className="font-medieval text-xl text-gold-400 mb-4 flex items-center gap-2">
             <Plus className="w-5 h-5" />
-            Créer une partie
+            Create a game
           </h2>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="playerName">Votre nom</Label>
+              <Label htmlFor="playerName">Your name</Label>
               <Input
                 id="playerName"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="Entrez votre nom..."
+                placeholder="Enter your name..."
                 className="mt-1"
               />
             </div>
 
             <div>
-              <Label>Votre couleur</Label>
+              <Label>Your color</Label>
               <div className="flex gap-2 mt-1">
                 {PLAYER_COLORS.map((color) => (
                   <button
@@ -241,41 +241,41 @@ export default function PlayPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Joueurs max</Label>
+                <Label>Max players</Label>
                 <Select value={maxPlayers} onValueChange={setMaxPlayers}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2">2 joueurs</SelectItem>
-                    <SelectItem value="3">3 joueurs</SelectItem>
-                    <SelectItem value="4">4 joueurs</SelectItem>
+                    <SelectItem value="2">2 players</SelectItem>
+                    <SelectItem value="3">3 players</SelectItem>
+                    <SelectItem value="4">4 players</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label>Points de vie</Label>
+                <Label>Starting life</Label>
                 <Select value={startingLife} onValueChange={setStartingLife}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="20">20 PV</SelectItem>
-                    <SelectItem value="40">40 PV (Commander)</SelectItem>
+                    <SelectItem value="20">20 HP</SelectItem>
+                    <SelectItem value="40">40 HP (Commander)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div>
-              <Label>Deck (optionnel)</Label>
+              <Label>Deck (optional)</Label>
               <Select value={selectedDeckId} onValueChange={setSelectedDeckId}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Sélectionner un deck..." />
+                  <SelectValue placeholder="Select a deck..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Aucun deck</SelectItem>
+                  <SelectItem value="none">No deck</SelectItem>
                   {decksData?.decks.map((deck) => (
                     <SelectItem key={deck.id} value={deck.id}>
                       {deck.name}
@@ -295,7 +295,7 @@ export default function PlayPage() {
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              Créer la partie
+              Create game
             </Button>
           </div>
         </div>
@@ -304,12 +304,12 @@ export default function PlayPage() {
         <div className="card-frame p-6">
           <h2 className="font-medieval text-xl text-gold-400 mb-4 flex items-center gap-2">
             <LogIn className="w-5 h-5" />
-            Rejoindre une partie
+            Join a game
           </h2>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="joinCode">Code de la partie</Label>
+              <Label htmlFor="joinCode">Game code</Label>
               <Input
                 id="joinCode"
                 value={joinCode}
@@ -321,18 +321,18 @@ export default function PlayPage() {
             </div>
 
             <div>
-              <Label htmlFor="joinName">Votre nom</Label>
+              <Label htmlFor="joinName">Your name</Label>
               <Input
                 id="joinName"
                 value={joinName}
                 onChange={(e) => setJoinName(e.target.value)}
-                placeholder="Entrez votre nom..."
+                placeholder="Enter your name..."
                 className="mt-1"
               />
             </div>
 
             <div>
-              <Label>Votre couleur</Label>
+              <Label>Your color</Label>
               <div className="flex gap-2 mt-1">
                 {PLAYER_COLORS.map((color) => (
                   <button
@@ -352,13 +352,13 @@ export default function PlayPage() {
             </div>
 
             <div>
-              <Label>Deck (optionnel)</Label>
+              <Label>Deck (optional)</Label>
               <Select value={joinDeckId} onValueChange={setJoinDeckId}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Sélectionner un deck..." />
+                  <SelectValue placeholder="Select a deck..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Aucun deck</SelectItem>
+                  <SelectItem value="none">No deck</SelectItem>
                   {decksData?.decks.map((deck) => (
                     <SelectItem key={deck.id} value={deck.id}>
                       {deck.name}
@@ -378,7 +378,7 @@ export default function PlayPage() {
               ) : (
                 <LogIn className="w-4 h-4 mr-2" />
               )}
-              Rejoindre
+              Join
             </Button>
           </div>
         </div>
@@ -389,7 +389,7 @@ export default function PlayPage() {
         <div className="card-frame p-6">
           <h2 className="font-medieval text-xl text-gold-400 mb-4 flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Parties en attente
+            Waiting games
           </h2>
 
           <div className="space-y-3">
@@ -417,7 +417,7 @@ export default function PlayPage() {
                   <div>
                     <p className="font-medium text-parchment-200">{session.name}</p>
                     <p className="text-xs text-parchment-500">
-                      {session.players.length}/{session.maxPlayers} joueurs • {session.startingLife} PV
+                      {session.players.length}/{session.maxPlayers} players • {session.startingLife} HP
                     </p>
                   </div>
                 </div>
@@ -433,7 +433,7 @@ export default function PlayPage() {
                       setJoinCode(session.code)
                     }}
                   >
-                    Rejoindre
+                    Join
                   </Button>
                 </div>
               </div>

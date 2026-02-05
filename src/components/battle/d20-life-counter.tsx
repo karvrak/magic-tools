@@ -21,14 +21,14 @@ export function D20LifeCounter({
   size = 'md',
   className,
 }: D20LifeCounterProps) {
-  // Permettre de modifier les PV même si éliminé (pour corriger les erreurs)
+  // Allow modifying life even when eliminated (to correct errors)
   const handleChange = (delta: number) => {
     onChange(life + delta)
   }
 
   const lifePercentage = Math.max(0, Math.min(100, (life / startingLife) * 100))
 
-  // Couleur basée sur les PV
+  // Color based on life points
   const getLifeColor = () => {
     if (life <= 0) return { fill: '#4a4035', text: '#6b5b45', glow: 'rgba(107, 91, 69, 0.3)' }
     if (lifePercentage <= 25) return { fill: '#dc2626', text: '#fca5a5', glow: 'rgba(220, 38, 38, 0.6)' }
@@ -98,7 +98,7 @@ export function D20LifeCounter({
 
       {/* Main counter with D20 */}
       <div className={cn('flex items-center', s.container)}>
-        {/* Minus button - cercle blanc semi-transparent */}
+        {/* Minus button - semi-transparent white circle */}
         <motion.button
           whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
           whileTap={{ scale: 0.9 }}
@@ -202,7 +202,7 @@ export function D20LifeCounter({
           )}
         </div>
 
-        {/* Plus button - cercle blanc semi-transparent */}
+        {/* Plus button - semi-transparent white circle */}
         <motion.button
           whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
           whileTap={{ scale: 0.9 }}
@@ -226,7 +226,7 @@ export function D20LifeCounter({
           animate={{ opacity: 1 }}
           className="text-xs text-parchment-500 italic text-center"
         >
-          Utilisez + pour faire revivre
+          Use + to revive
         </motion.p>
       )}
     </div>

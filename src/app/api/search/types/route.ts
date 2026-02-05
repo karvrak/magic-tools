@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching type suggestions:', error)
     
-    // Si la vue n'existe pas, retourner une liste vide
-    // Cela arrive si la migration n'a pas encore été exécutée
+    // If the view does not exist, return an empty list
+    // This happens if the migration has not been executed yet
     if (error instanceof Error && error.message.includes('card_type_words')) {
       return NextResponse.json({ suggestions: [], error: 'View not initialized' })
     }

@@ -143,7 +143,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     setManaPool(0)
     setGameStarted(true)
     setSelectedHandIndices(new Set())
-    setActionLog(['Partie démarrée - Main de 7 cartes'])
+    setActionLog(['Game started - 7 card hand'])
   }, [fullDeck, initialLife])
 
   // London Mulligan
@@ -159,7 +159,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     setHand(newHand)
     setMulliganCount(newMulliganCount)
     setSelectedHandIndices(new Set())
-    logAction(`Mulligan à ${7 - newMulliganCount}`)
+    logAction(`Mulligan to ${7 - newMulliganCount}`)
   }, [fullDeck, mulliganCount, logAction])
 
   // Put selected cards on bottom (London mulligan final step)
@@ -182,7 +182,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     setSelectedHandIndices(new Set())
     setMulliganCount(0)
     setTurn(1)
-    logAction('Main gardée, partie commencée')
+    logAction('Hand kept, game started')
   }, [hand, library, selectedHandIndices, mulliganCount, logAction])
 
   // Draw a card
@@ -195,14 +195,14 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     
     setHand([...hand, ...drawnCards])
     setLibrary(remainingLibrary)
-    logAction(`Pioche ${drawCount} carte${drawCount > 1 ? 's' : ''}`)
+    logAction(`Draw ${drawCount} card${drawCount > 1 ? 's' : ''}`)
   }, [library, hand, logAction])
 
   // Next turn (untap, draw, increment)
   const nextTurn = useCallback(() => {
     if (turn === 0) {
       setTurn(1)
-      logAction('Tour 1 commence')
+      logAction('Turn 1 begins')
       return
     }
     
@@ -221,7 +221,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     }
     
     setTurn(turn + 1)
-    logAction(`Tour ${turn + 1} - Dégagement, pioche`)
+    logAction(`Turn ${turn + 1} - Untap, draw`)
   }, [turn, library, hand, battlefield, logAction])
 
   // Play a card from hand to battlefield
@@ -242,7 +242,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
       setManaPool(prev => prev + 1)
     }
     
-    logAction(`Joue ${card.name}`)
+    logAction(`Play ${card.name}`)
   }, [hand, battlefield, logAction])
 
   // Discard a card
@@ -251,7 +251,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     const newHand = hand.filter((_, i) => i !== index)
     setHand(newHand)
     setGraveyard([card, ...graveyard])
-    logAction(`Défausse ${card.name}`)
+    logAction(`Discard ${card.name}`)
   }, [hand, graveyard, logAction])
 
   // Exile a card from hand
@@ -260,7 +260,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     const newHand = hand.filter((_, i) => i !== index)
     setHand(newHand)
     setExile([card, ...exile])
-    logAction(`Exile ${card.name} (main)`)
+    logAction(`Exile ${card.name} (hand)`)
   }, [hand, exile, logAction])
 
   // Toggle tap state
@@ -279,7 +279,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     
     setBattlefield(prev => prev.filter(c => c.uniqueId !== uniqueId))
     setGraveyard([card, ...graveyard])
-    logAction(`${card.name} → cimetière`)
+    logAction(`${card.name} → graveyard`)
   }, [battlefield, graveyard, logAction])
 
   // Send to exile from battlefield
@@ -289,7 +289,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     
     setBattlefield(prev => prev.filter(c => c.uniqueId !== uniqueId))
     setExile([card, ...exile])
-    logAction(`${card.name} → exil`)
+    logAction(`${card.name} → exile`)
   }, [battlefield, exile, logAction])
 
   // Bounce: return from battlefield to hand
@@ -299,7 +299,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     
     setBattlefield(prev => prev.filter(c => c.uniqueId !== uniqueId))
     setHand([...hand, card])
-    logAction(`${card.name} → main (bounce)`)
+    logAction(`${card.name} → hand (bounce)`)
   }, [battlefield, hand, logAction])
 
   // Return from graveyard to hand
@@ -309,7 +309,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     
     setGraveyard(prev => prev.filter((_, i) => i !== index))
     setHand([...hand, card])
-    logAction(`${card.name} → main (cimetière)`)
+    logAction(`${card.name} → hand (graveyard)`)
   }, [graveyard, hand, logAction])
 
   // Return from graveyard to battlefield (reanimate)
@@ -336,10 +336,10 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     setGraveyard(prev => prev.filter((_, i) => i !== index))
     if (toTop) {
       setLibrary([card, ...library])
-      logAction(`${card.name} → dessus bibliothèque`)
+      logAction(`${card.name} → top of library`)
     } else {
       setLibrary(shuffleArray([...library, card]))
-      logAction(`${card.name} → bibliothèque (mélangé)`)
+      logAction(`${card.name} → library (shuffled)`)
     }
   }, [graveyard, library, logAction])
 
@@ -350,7 +350,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     
     setExile(prev => prev.filter((_, i) => i !== index))
     setHand([...hand, card])
-    logAction(`${card.name} → main (exil)`)
+    logAction(`${card.name} → hand (exile)`)
   }, [exile, hand, logAction])
 
   // Return from exile to battlefield
@@ -366,7 +366,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     
     setExile(prev => prev.filter((_, i) => i !== index))
     setBattlefield([...battlefield, battlefieldCard])
-    logAction(`${card.name} → battlefield (exil)`)
+    logAction(`${card.name} → battlefield (exile)`)
   }, [exile, battlefield, logAction])
 
   // Return from exile to library
@@ -377,10 +377,10 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
     setExile(prev => prev.filter((_, i) => i !== index))
     if (toTop) {
       setLibrary([card, ...library])
-      logAction(`${card.name} → dessus bibliothèque (exil)`)
+      logAction(`${card.name} → top of library (exile)`)
     } else {
       setLibrary(shuffleArray([...library, card]))
-      logAction(`${card.name} → bibliothèque mélangée (exil)`)
+      logAction(`${card.name} → library shuffled (exile)`)
     }
   }, [exile, library, logAction])
 
@@ -459,24 +459,24 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
       <div className="flex flex-col items-center justify-center py-12 space-y-6">
         <div className="text-center space-y-2">
           <Layers className="w-16 h-16 text-gold-500 mx-auto mb-4" />
-          <h2 className="font-medieval text-2xl text-gold-400">Mode Goldfish</h2>
+          <h2 className="font-medieval text-2xl text-gold-400">Goldfish Mode</h2>
           <p className="text-parchment-400 max-w-md">
-            Testez votre deck en simulant des mains de départ et des tours.
-            Idéal pour vérifier votre courbe de mana et vos openers.
+            Test your deck by simulating opening hands and turns.
+            Ideal for checking your mana curve and openers.
           </p>
           <p className="text-sm text-parchment-500">
-            {deckSize} cartes • {initialLife} PV
+            {deckSize} cards • {initialLife} LP
           </p>
         </div>
         
         <Button size="lg" onClick={startGame} className="gap-2">
           <Shuffle className="w-5 h-5" />
-          Tirer une main
+          Draw a hand
         </Button>
 
         <div className="text-xs text-parchment-600 text-center space-y-1">
-          <p className="font-medium">Raccourcis clavier</p>
-          <p><kbd className="px-1.5 py-0.5 bg-dungeon-700 rounded">D</kbd> Piocher • <kbd className="px-1.5 py-0.5 bg-dungeon-700 rounded">N</kbd> Tour suivant • <kbd className="px-1.5 py-0.5 bg-dungeon-700 rounded">R</kbd> Recommencer</p>
+          <p className="font-medium">Keyboard shortcuts</p>
+          <p><kbd className="px-1.5 py-0.5 bg-dungeon-700 rounded">D</kbd> Draw • <kbd className="px-1.5 py-0.5 bg-dungeon-700 rounded">N</kbd> Next turn • <kbd className="px-1.5 py-0.5 bg-dungeon-700 rounded">R</kbd> Restart</p>
         </div>
       </div>
     )
@@ -531,7 +531,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
           {/* Turn counter */}
           {turn > 0 && (
             <div className="px-3 py-1.5 rounded-lg bg-gold-500/20 border border-gold-500/30">
-              <span className="text-gold-400 font-medium">Tour {turn}</span>
+              <span className="text-gold-400 font-medium">Turn {turn}</span>
             </div>
           )}
         </div>
@@ -588,7 +588,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
           <>
             <Button variant="outline" size="sm" onClick={() => draw(1)} disabled={library.length === 0} className="gap-1.5">
               <ChevronDown className="w-4 h-4" />
-              Piocher
+              Draw
             </Button>
             <Button 
               variant="outline" 
@@ -610,7 +610,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
           className="gap-1.5"
         >
           <ChevronRight className="w-4 h-4" />
-          {turn === 0 ? 'Garder' : 'Tour suivant'}
+          {turn === 0 ? 'Keep' : 'Next turn'}
         </Button>
         
         <Button variant="secondary" size="sm" onClick={startGame} className="gap-1.5">
@@ -623,7 +623,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
       {inMulliganPhase && (
         <div className="p-4 rounded-lg bg-gold-500/10 border border-gold-500/30">
           <p className="text-gold-400 text-center">
-            <strong>Mulligan à {7 - mulliganCount}</strong> — Sélectionnez {mulliganCount} carte{mulliganCount > 1 ? 's' : ''} à mettre en dessous
+            <strong>Mulligan to {7 - mulliganCount}</strong> — Select {mulliganCount} card{mulliganCount > 1 ? 's' : ''} to put on bottom
             <span className="text-parchment-400 ml-2">
               ({selectedHandIndices.size}/{mulliganCount})
             </span>
@@ -632,7 +632,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
             <div className="flex justify-center mt-3">
               <Button size="sm" onClick={putOnBottom} className="gap-1.5">
                 <ArrowDown className="w-4 h-4" />
-                Mettre en dessous et commencer
+                Put on bottom and start
               </Button>
             </div>
           )}
@@ -643,24 +643,24 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
       <div className="grid grid-cols-4 gap-2 text-center">
         <div className="p-2 rounded-lg bg-dungeon-800 border border-dungeon-600">
           <div className="text-xs text-parchment-500 flex items-center justify-center gap-1">
-            <Mountain className="w-3 h-3" /> Terrains
+            <Mountain className="w-3 h-3" /> Lands
           </div>
           <p className="text-lg font-bold text-parchment-200">{handStats.lands}</p>
         </div>
         <div className="p-2 rounded-lg bg-dungeon-800 border border-dungeon-600">
           <div className="text-xs text-parchment-500 flex items-center justify-center gap-1">
-            <Sparkles className="w-3 h-3" /> Sorts
+            <Sparkles className="w-3 h-3" /> Spells
           </div>
           <p className="text-lg font-bold text-parchment-200">{handStats.nonLands}</p>
         </div>
         <div className="p-2 rounded-lg bg-dungeon-800 border border-dungeon-600">
           <div className="text-xs text-parchment-500 flex items-center justify-center gap-1">
-            <Hand className="w-3 h-3" /> Main
+            <Hand className="w-3 h-3" /> Hand
           </div>
           <p className="text-lg font-bold text-parchment-200">{hand.length}</p>
         </div>
         <div className="p-2 rounded-lg bg-dungeon-800 border border-dungeon-600">
-          <div className="text-xs text-parchment-500">CMC moy.</div>
+          <div className="text-xs text-parchment-500">Avg CMC</div>
           <p className="text-lg font-bold text-parchment-200">{handStats.avgCmc.toFixed(1)}</p>
         </div>
       </div>
@@ -669,7 +669,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
       <div className="card-frame p-4">
         <h3 className="font-medieval text-lg text-gold-400 mb-3 flex items-center gap-2">
           <Hand className="w-5 h-5" />
-          Main ({hand.length})
+          Hand ({hand.length})
         </h3>
         
         <div className="flex flex-wrap gap-2 justify-center min-h-[180px]">
@@ -725,23 +725,23 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
                       <button
                         onClick={() => playCard(index)}
                         className="px-1.5 py-1 text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white rounded-l"
-                        title="Jouer"
+                        title="Play"
                       >
                         Play
                       </button>
                       <button
                         onClick={() => discardCard(index)}
                         className="px-1.5 py-1 text-[10px] bg-dragon-600 hover:bg-dragon-500 text-white"
-                        title="Défausser"
+                        title="Discard"
                       >
                         Def.
                       </button>
                       <button
                         onClick={() => exileFromHand(index)}
                         className="px-1.5 py-1 text-[10px] bg-dungeon-600 hover:bg-dungeon-500 text-white rounded-r"
-                        title="Exiler"
+                        title="Exile"
                       >
-                        Exil
+                        Exile
                       </button>
                     </div>
                   )}
@@ -751,7 +751,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
           </AnimatePresence>
           
           {hand.length === 0 && (
-            <p className="text-parchment-500 italic py-8">Main vide</p>
+            <p className="text-parchment-500 italic py-8">Empty hand</p>
           )}
         </div>
       </div>
@@ -761,14 +761,14 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
         <div className="card-frame p-4 space-y-4">
           <h3 className="font-medieval text-lg text-gold-400 flex items-center gap-2">
             <Layers className="w-5 h-5" />
-            Champ de bataille ({battlefield.length})
+            Battlefield ({battlefield.length})
           </h3>
 
           {/* Lands row */}
           {battlefieldLands.length > 0 && (
             <div>
               <p className="text-xs text-parchment-500 mb-2 flex items-center gap-1">
-                <Mountain className="w-3 h-3" /> Terrains ({battlefieldLands.length})
+                <Mountain className="w-3 h-3" /> Lands ({battlefieldLands.length})
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {battlefieldLands.map((card) => (
@@ -790,7 +790,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
           {battlefieldCreatures.length > 0 && (
             <div>
               <p className="text-xs text-parchment-500 mb-2 flex items-center gap-1">
-                <Sword className="w-3 h-3" /> Créatures ({battlefieldCreatures.length})
+                <Sword className="w-3 h-3" /> Creatures ({battlefieldCreatures.length})
               </p>
               <div className="flex flex-wrap gap-2">
                 {battlefieldCreatures.map((card) => (
@@ -811,7 +811,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
           {battlefieldOther.length > 0 && (
             <div>
               <p className="text-xs text-parchment-500 mb-2 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Autres ({battlefieldOther.length})
+                <Sparkles className="w-3 h-3" /> Others ({battlefieldOther.length})
               </p>
               <div className="flex flex-wrap gap-2">
                 {battlefieldOther.map((card) => (
@@ -835,7 +835,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
         <div className="card-frame p-4">
           <h3 className="font-medieval text-lg text-gold-400 mb-3 flex items-center gap-2">
             <Library className="w-5 h-5" />
-            Bibliothèque ({library.length})
+            Library ({library.length})
             <button onClick={() => setShowLibrary(false)} className="ml-auto text-parchment-400 hover:text-parchment-200">
               <EyeOff className="w-4 h-4" />
             </button>
@@ -870,7 +870,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
         <div className="card-frame p-4">
           <h3 className="font-medieval text-lg text-gold-400 mb-3 flex items-center gap-2">
             <Trash2 className="w-5 h-5" />
-            Cimetière ({graveyard.length})
+            Graveyard ({graveyard.length})
             <button onClick={() => setShowGraveyard(false)} className="ml-auto text-parchment-400 hover:text-parchment-200">
               <EyeOff className="w-4 h-4" />
             </button>
@@ -896,7 +896,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
                   <button
                     onClick={() => graveyardToHand(index)}
                     className="p-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[8px]"
-                    title="Retour en main"
+                    title="Return to hand"
                   >
                     <Hand className="w-3 h-3" />
                   </button>
@@ -910,7 +910,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
                   <button
                     onClick={() => graveyardToLibrary(index, true)}
                     className="p-1 bg-arcane-600 hover:bg-arcane-500 text-white rounded text-[8px]"
-                    title="Dessus bibliothèque"
+                    title="Top of library"
                   >
                     <ArrowUp className="w-3 h-3" />
                   </button>
@@ -926,7 +926,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
         <div className="card-frame p-4">
           <h3 className="font-medieval text-lg text-gold-400 mb-3 flex items-center gap-2">
             <Skull className="w-5 h-5" />
-            Exil ({exile.length})
+            Exile ({exile.length})
             <button onClick={() => setShowExile(false)} className="ml-auto text-parchment-400 hover:text-parchment-200">
               <EyeOff className="w-4 h-4" />
             </button>
@@ -952,21 +952,21 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
                   <button
                     onClick={() => exileToHand(index)}
                     className="p-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[8px]"
-                    title="Retour en main"
+                    title="Return to hand"
                   >
                     <Hand className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => exileToBattlefield(index)}
                     className="p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[8px]"
-                    title="Mettre en jeu"
+                    title="Put into play"
                   >
                     <Play className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => exileToLibrary(index, true)}
                     className="p-1 bg-arcane-600 hover:bg-arcane-500 text-white rounded text-[8px]"
-                    title="Dessus bibliothèque"
+                    title="Top of library"
                   >
                     <ArrowUp className="w-3 h-3" />
                   </button>
@@ -992,7 +992,7 @@ export function PlaytestView({ deckName, cards, format }: PlaytestViewProps) {
       {/* Action log */}
       {actionLog.length > 0 && (
         <div className="text-xs text-parchment-600 border-t border-dungeon-700 pt-3 mt-4">
-          <p className="font-medium mb-1">Historique :</p>
+          <p className="font-medium mb-1">History:</p>
           <div className="max-h-16 overflow-y-auto space-y-0.5">
             {actionLog.slice(0, 5).map((log, i) => (
               <p key={i} className={i === 0 ? "text-parchment-400" : ""}>{log}</p>
@@ -1060,28 +1060,28 @@ function BattlefieldCardComponent({
         <button
           onClick={onTap}
           className="p-1 bg-arcane-600 hover:bg-arcane-500 text-white rounded text-[8px]"
-          title={card.tapped ? "Dégager" : "Engager"}
+          title={card.tapped ? "Untap" : "Tap"}
         >
           <RotateCw className="w-3 h-3" />
         </button>
         <button
           onClick={onBounce}
           className="p-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[8px]"
-          title="Retour en main"
+          title="Return to hand"
         >
           <Undo2 className="w-3 h-3" />
         </button>
         <button
           onClick={onGraveyard}
           className="p-1 bg-dragon-600 hover:bg-dragon-500 text-white rounded text-[8px]"
-          title="Cimetière"
+          title="Graveyard"
         >
           <Trash2 className="w-3 h-3" />
         </button>
         <button
           onClick={onExile}
           className="p-1 bg-dungeon-600 hover:bg-dungeon-500 text-white rounded text-[8px]"
-          title="Exiler"
+          title="Exile"
         >
           <Skull className="w-3 h-3" />
         </button>
@@ -1136,7 +1136,7 @@ function ScryModal({
 
         {/* Scry count selector */}
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm text-parchment-400">Nombre :</span>
+          <span className="text-sm text-parchment-400">Count:</span>
           {[1, 2, 3, 4, 5].filter(n => n <= maxScry).map(n => (
             <button
               key={n}
@@ -1177,23 +1177,23 @@ function ScryModal({
                 "absolute bottom-0 left-0 right-0 py-1 text-center text-xs font-medium",
                 decisions[index] ? "bg-emerald-500/90 text-white" : "bg-dragon-500/90 text-white"
               )}>
-                {decisions[index] ? "↑ Dessus" : "↓ Dessous"}
+                {decisions[index] ? "↑ Top" : "↓ Bottom"}
               </div>
             </button>
           ))}
         </div>
 
         <p className="text-xs text-parchment-500 text-center mb-4">
-          Cliquez sur une carte pour changer sa destination
+          Click a card to change its destination
         </p>
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel}>
-            Annuler
+            Cancel
           </Button>
           <Button onClick={handleConfirm}>
-            Confirmer
+            Confirm
           </Button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET /api/tags - Liste tous les tags avec le nombre de decks
+// GET /api/tags - List all tags with deck count
 export async function GET() {
   try {
     const tags = await prisma.tag.findMany({
@@ -31,7 +31,7 @@ export async function GET() {
   }
 }
 
-// POST /api/tags - Créer un nouveau tag
+// POST /api/tags - Create a new tag
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Normaliser le nom (lowercase, trim)
+    // Normalize the name (lowercase, trim)
     const normalizedName = name.toLowerCase().trim()
 
     if (normalizedName.length === 0) {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Vérifier si le tag existe déjà
+    // Check if the tag already exists
     const existing = await prisma.tag.findUnique({
       where: { name: normalizedName }
     })
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Créer le tag
+    // Create the tag
     const tag = await prisma.tag.create({
       data: {
         name: normalizedName,
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/tags - Supprimer un tag (via query param ?id=xxx)
+// DELETE /api/tags - Delete a tag (via query param ?id=xxx)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

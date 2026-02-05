@@ -171,7 +171,7 @@ export function CollectionCardItem({
               className="absolute top-2 right-2 z-10 px-1.5 py-1 rounded bg-arcane-600/90 backdrop-blur-sm flex items-center gap-1"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              title={`Dans ${decksContaining.length} deck(s): ${decksContaining.map(d => d.name).join(', ')}`}
+              title={`In ${decksContaining.length} deck(s): ${decksContaining.map(d => d.name).join(', ')}`}
             >
               <Layers className="w-3 h-3 text-white" />
               <span className="text-[10px] font-bold text-white">{totalInDecks}</span>
@@ -201,7 +201,7 @@ export function CollectionCardItem({
                 exit={{ opacity: 0, scale: 0.8 }}
                 onClick={handleAddToDeck}
                 className="absolute bottom-2 right-2 z-10 p-2 rounded-full bg-arcane-600 hover:bg-arcane-500 border border-arcane-400/50 shadow-lg"
-                title="Ajouter à un deck"
+                title="Add to a deck"
               >
                 <Package className="w-4 h-4 text-white" />
               </motion.button>

@@ -178,7 +178,7 @@ export function QuickSearch() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Rechercher une carte..."
+                    placeholder="Search for a card..."
                     className={cn(
                       'flex-1 bg-transparent border-none outline-none',
                       'text-parchment-200 placeholder:text-dungeon-400',
@@ -191,13 +191,13 @@ export function QuickSearch() {
                   {/* Submit hint */}
                   <div className="flex items-center gap-1.5 text-dungeon-400">
                     <CornerDownLeft className="w-4 h-4" />
-                    <span className="text-xs font-mono">Entrée</span>
+                    <span className="text-xs font-mono">Enter</span>
                   </div>
                 </div>
 
                 {/* Help text */}
                 <div className="mt-3 flex items-center justify-between text-xs text-dungeon-500">
-                  <span>Les filtres seront réinitialisés</span>
+                  <span>Filters will be reset</span>
                   <kbd className="px-1.5 py-0.5 bg-dungeon-700 border border-dungeon-600 rounded text-dungeon-400">
                     Esc
                   </kbd>

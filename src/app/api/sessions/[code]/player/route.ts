@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// PATCH /api/sessions/[code]/player - Mettre à jour l'état d'un joueur
+// PATCH /api/sessions/[code]/player - Update a player's state
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -32,7 +32,7 @@ export async function PATCH(
       )
     }
 
-    // Vérifier que la session existe
+    // Verify that the session exists
     const session = await prisma.gameSession.findUnique({
       where: { code: code.toUpperCase() },
       include: { players: true },
@@ -45,7 +45,7 @@ export async function PATCH(
       )
     }
 
-    // Vérifier que le joueur appartient à cette session
+    // Verify that the player belongs to this session
     const player = session.players.find(p => p.id === playerId)
     if (!player) {
       return NextResponse.json(
@@ -54,7 +54,7 @@ export async function PATCH(
       )
     }
 
-    // Construire les updates
+    // Build the updates
     const updates: Record<string, unknown> = {
       lastSeenAt: new Date(),
     }
@@ -72,13 +72,13 @@ export async function PATCH(
     if (isEliminated !== undefined) updates.isEliminated = isEliminated
     if (isReady !== undefined) updates.isReady = isReady
 
-    // Mettre à jour le joueur
+    // Update the player
     const updatedPlayer = await prisma.gamePlayer.update({
       where: { id: playerId },
       data: updates,
     })
 
-    // Récupérer la session mise à jour
+    // Retrieve the updated session
     const updatedSession = await prisma.gameSession.findUnique({
       where: { id: session.id },
       include: { players: { orderBy: { playerOrder: 'asc' } } },
@@ -97,7 +97,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/sessions/[code]/player - Quitter la session
+// DELETE /api/sessions/[code]/player - Leave the session
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -134,13 +134,13 @@ export async function DELETE(
       )
     }
 
-    // Si la partie n'a pas commencé, supprimer le joueur
+    // If the game has not started, delete the player
     if (session.status === 'waiting') {
       await prisma.gamePlayer.delete({
         where: { id: playerId },
       })
 
-      // Si c'était l'hôte et qu'il reste des joueurs, transférer l'hôte
+      // If it was the host and there are remaining players, transfer host status
       if (player.isHost && session.players.length > 1) {
         const nextHost = session.players.find(p => p.id !== playerId)
         if (nextHost) {
@@ -151,7 +151,7 @@ export async function DELETE(
         }
       }
 
-      // Si plus personne, supprimer la session
+      // If no one left, delete the session
       if (session.players.length <= 1) {
         await prisma.gameSession.delete({
           where: { id: session.id },
@@ -159,7 +159,7 @@ export async function DELETE(
         return NextResponse.json({ deleted: true })
       }
     } else {
-      // Partie en cours : marquer comme déconnecté
+      // Game in progress: mark as disconnected
       await prisma.gamePlayer.update({
         where: { id: playerId },
         data: { isConnected: false },

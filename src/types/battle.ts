@@ -20,7 +20,7 @@ export const GAME_MODES: Record<GameMode, GameModeConfig> = {
   CLASSIC_1V1: {
     mode: 'CLASSIC_1V1',
     name: '1v1 Classic',
-    description: 'Duel classique, premier à 0 PV perd',
+    description: 'Classic duel, first to 0 LP loses',
     players: 2,
     startingLife: 20,
     hasTeams: false,
@@ -30,7 +30,7 @@ export const GAME_MODES: Record<GameMode, GameModeConfig> = {
   FREE_FOR_ALL_3: {
     mode: 'FREE_FOR_ALL_3',
     name: '1v1v1 Victory Points',
-    description: '+1 VP par dégât de combat. Score final = PV + VP',
+    description: '+1 VP per combat damage. Final score = LP + VP',
     players: 3,
     startingLife: 20,
     hasTeams: false,
@@ -40,7 +40,7 @@ export const GAME_MODES: Record<GameMode, GameModeConfig> = {
   TWO_HEADED_GIANT: {
     mode: 'TWO_HEADED_GIANT',
     name: '2v2 Team Battle',
-    description: 'À 0 PV, drain 1 PV de l\'allié. Première équipe à 0 total perd',
+    description: 'At 0 LP, drain 1 LP from ally. First team to 0 total loses',
     players: 4,
     startingLife: 20,
     hasTeams: true,
@@ -50,7 +50,7 @@ export const GAME_MODES: Record<GameMode, GameModeConfig> = {
   COMMANDER: {
     mode: 'COMMANDER',
     name: 'Commander',
-    description: '40 PV, 21 dégâts d\'un même commandant = élimination',
+    description: '40 LP, 21 damage from same commander = elimination',
     players: 4,
     startingLife: 40,
     hasTeams: false,
@@ -60,23 +60,23 @@ export const GAME_MODES: Record<GameMode, GameModeConfig> = {
   },
 }
 
-// État d'un joueur pendant la partie (client-side)
+// Player state during the game (client-side)
 export interface PlayerState {
   id: string
   deckId: string | null
   deckName: string
-  deckImageUrl?: string | null // URL de l'image du deck (commander ou artwork)
+  deckImageUrl?: string | null // Deck image URL (commander or artwork)
   playerOrder: number
   team: number | null
   currentLife: number
   startingLife: number
   victoryPoints: number
   isEliminated: boolean
-  commanderDamage: Record<string, number> // { "1": 5, "2": 12 } = reçu 5 du joueur 1, 12 du joueur 2
-  diceRoll?: number // Résultat du lancer de dé initial
+  commanderDamage: Record<string, number> // { "1": 5, "2": 12 } = received 5 from player 1, 12 from player 2
+  diceRoll?: number // Initial dice roll result
 }
 
-// Données pour créer une bataille
+// Data for creating a battle
 export interface CreateBattleInput {
   mode: GameMode
   players: {
@@ -86,7 +86,7 @@ export interface CreateBattleInput {
   }[]
 }
 
-// Résultat de la bataille
+// Battle result
 export interface BattleResult {
   winnerId?: string
   winnerTeam?: number
@@ -98,11 +98,11 @@ export interface BattleResult {
     victoryPoints: number
     isEliminated: boolean
     team?: number
-    score?: number // PV + VP pour le mode FFA
+    score?: number // LP + VP for FFA mode
   }[]
 }
 
-// Battle complet depuis la DB
+// Complete battle from DB
 export interface Battle {
   id: string
   mode: GameMode

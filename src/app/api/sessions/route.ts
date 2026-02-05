@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// Générer un code court unique (6 caractères)
+// Generate a unique short code (6 characters)
 function generateCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Sans I, O, 0, 1 pour éviter confusion
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Without I, O, 0, 1 to avoid confusion
   let code = ''
   for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length))
@@ -11,7 +11,7 @@ function generateCode(): string {
   return code
 }
 
-// GET /api/sessions - Liste mes sessions récentes (par cookie ou autre)
+// GET /api/sessions - List my recent sessions (by cookie or other)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
 
-    // Sessions récentes (dernières 24h)
+    // Recent sessions (last 24 hours)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
     where.createdAt = { gte: oneDayAgo }
 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/sessions - Créer une nouvelle session
+// POST /api/sessions - Create a new session
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Générer un code unique
+    // Generate a unique code
     let code = generateCode()
     let attempts = 0
     while (attempts < 10) {
@@ -86,11 +86,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Créer la session avec le joueur hôte
+    // Create the session with the host player
     const session = await prisma.gameSession.create({
       data: {
         code,
-        name: name || `Partie de ${playerName}`,
+        name: name || `${playerName}'s game`,
         maxPlayers: Math.min(Math.max(maxPlayers, 2), 4),
         startingLife,
         format,

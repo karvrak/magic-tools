@@ -168,7 +168,7 @@ function GameSessionContent({ code }: { code: string }) {
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-    toast({ title: '📋 Lien copié !', description: url })
+    toast({ title: '📋 Link copied!', description: url })
   }, [code, toast])
 
   // Handle stats update from playtest
@@ -210,11 +210,11 @@ function GameSessionContent({ code }: { code: string }) {
   if (sessionError || !session) {
     return (
       <div className="card-frame p-12 text-center">
-        <p className="text-dragon-400 mb-4">Session introuvable</p>
+        <p className="text-dragon-400 mb-4">Session not found</p>
         <Link href="/play">
           <Button>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
+            Back
           </Button>
         </Link>
       </div>
@@ -230,13 +230,13 @@ function GameSessionContent({ code }: { code: string }) {
           className="inline-flex items-center text-sm text-parchment-400 hover:text-parchment-200"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Retour
+          Back
         </Link>
 
         <div className="card-frame p-6 text-center">
           <h1 className="font-medieval text-2xl text-gold-400 mb-2">{session.name}</h1>
           <p className="text-parchment-400 mb-4">
-            En attente de joueurs ({session.players.length}/{session.maxPlayers})
+            Waiting for players ({session.players.length}/{session.maxPlayers})
           </p>
 
           {/* Invite code */}
@@ -282,7 +282,7 @@ function GameSessionContent({ code }: { code: string }) {
                       {player.name}
                       {player.isHost && <Crown className="w-4 h-4 text-gold-400" />}
                       {player.id === playerId && (
-                        <span className="text-xs text-arcane-400">(vous)</span>
+                        <span className="text-xs text-arcane-400">(you)</span>
                       )}
                     </p>
                     {player.deckName && (
@@ -300,7 +300,7 @@ function GameSessionContent({ code }: { code: string }) {
                 className="flex items-center justify-center p-3 rounded-lg border border-dashed border-dungeon-600 text-parchment-500"
               >
                 <Users className="w-4 h-4 mr-2" />
-                En attente...
+                Waiting...
               </div>
             ))}
           </div>
@@ -312,7 +312,7 @@ function GameSessionContent({ code }: { code: string }) {
             disabled={leaveMutation.isPending}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Quitter
+            Leave
           </Button>
         </div>
       </div>
@@ -332,7 +332,7 @@ function GameSessionContent({ code }: { code: string }) {
         <div>
           <h1 className="font-medieval text-xl text-gold-400">{session.name}</h1>
           <p className="text-sm text-parchment-500">
-            {session.startingLife} PV • {session.players.length} joueurs
+            {session.startingLife} HP • {session.players.length} players
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -374,9 +374,9 @@ function GameSessionContent({ code }: { code: string }) {
       {/* Finished state */}
       {session.status === 'finished' && (
         <div className="card-frame p-6 text-center">
-          <h2 className="font-medieval text-xl text-gold-400 mb-4">Partie terminée !</h2>
+          <h2 className="font-medieval text-xl text-gold-400 mb-4">Game Over!</h2>
           <Link href="/play">
-            <Button>Nouvelle partie</Button>
+            <Button>New Game</Button>
           </Link>
         </div>
       )}

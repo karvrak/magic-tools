@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -106,7 +106,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  const [selectedCard, setSelectedCard] = useState<CardWithPrice | null>(null)
+  const [selectedDeckCard, setSelectedDeckCard] = useState<DeckCard | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showCoverModal, setShowCoverModal] = useState(false)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
@@ -317,14 +317,14 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
       queryClient.invalidateQueries({ queryKey: ['decks'] })
       setShowCoverModal(false)
       toast({
-        title: '🖼️ Couverture mise à jour',
-        description: 'La couverture du grimoire a été changée.',
+        title: 'Cover updated',
+        description: 'The spellbook cover has been changed.',
       })
     },
     onError: () => {
       toast({
-        title: 'Échec',
-        description: 'Impossible de mettre à jour la couverture.',
+        title: 'Failed',
+        description: 'Could not update the cover.',
         variant: 'destructive',
       })
     },
@@ -346,16 +346,16 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
       setShowDuplicateModal(false)
       setDuplicateName('')
       toast({
-        title: '📋 Deck dupliqué !',
-        description: `"${data.deck.name}" créé en mode construction.`,
+        title: 'Deck duplicated!',
+        description: `"${data.deck.name}" created in build mode.`,
       })
       // Navigate to the new deck
       router.push(`/decks/${data.deck.id}`)
     },
     onError: () => {
       toast({
-        title: 'Échec',
-        description: 'Impossible de dupliquer le deck.',
+        title: 'Failed',
+        description: 'Could not duplicate the deck.',
         variant: 'destructive',
       })
     },
@@ -380,8 +380,8 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
     },
     onError: () => {
       toast({
-        title: 'Erreur',
-        description: 'Impossible de modifier les tags.',
+        title: 'Error',
+        description: 'Could not update the tags.',
         variant: 'destructive',
       })
     },
@@ -425,7 +425,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
   // Open duplicate modal with suggested name
   const handleOpenDuplicateModal = () => {
     if (data?.deck) {
-      setDuplicateName(`${data.deck.name} (copie)`)
+      setDuplicateName(`${data.deck.name} (copy)`)
       setShowDuplicateModal(true)
     }
   }
@@ -434,6 +434,34 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
     if (!duplicateName.trim()) return
     duplicateDeckMutation.mutate(duplicateName.trim())
   }
+
+  // Flat ordered list of deck cards for modal navigation (same order as list view)
+  const orderedDeckCards = useMemo(() => {
+    const cards = data?.deck?.cards
+    if (!cards) return []
+    const result: DeckCard[] = []
+    for (const cat of CARD_CATEGORIES) {
+      result.push(...cards.filter(c => c.category === cat.code))
+    }
+    return result
+  }, [data?.deck?.cards])
+
+  const selectedDeckCardIndex = useMemo(() => {
+    if (!selectedDeckCard) return -1
+    return orderedDeckCards.findIndex(dc => dc.id === selectedDeckCard.id)
+  }, [selectedDeckCard, orderedDeckCards])
+
+  const handleNavPrev = useCallback(() => {
+    if (selectedDeckCardIndex > 0) {
+      setSelectedDeckCard(orderedDeckCards[selectedDeckCardIndex - 1])
+    }
+  }, [selectedDeckCardIndex, orderedDeckCards])
+
+  const handleNavNext = useCallback(() => {
+    if (selectedDeckCardIndex >= 0 && selectedDeckCardIndex < orderedDeckCards.length - 1) {
+      setSelectedDeckCard(orderedDeckCards[selectedDeckCardIndex + 1])
+    }
+  }, [selectedDeckCardIndex, orderedDeckCards])
 
   if (isLoading) {
     return (
@@ -480,8 +508,8 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             className="inline-flex items-center text-sm text-parchment-400 hover:text-parchment-200"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">Retour aux decks</span>
-            <span className="sm:hidden">Retour</span>
+            <span className="hidden sm:inline">Back to decks</span>
+            <span className="sm:hidden">Back</span>
           </Link>
 
           {/* Desktop Actions */}
@@ -496,7 +524,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                     ? "bg-gold-500/20 text-gold-400" 
                     : "text-parchment-400 hover:text-parchment-200"
                 )}
-                title="Vue liste"
+                title="List view"
               >
                 <List className="w-4 h-4" />
               </button>
@@ -508,7 +536,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                     ? "bg-gold-500/20 text-gold-400" 
                     : "text-parchment-400 hover:text-parchment-200"
                 )}
-                title="Vue visuelle"
+                title="Visual view"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -525,7 +553,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                       ? "bg-arcane-500/20 text-arcane-400" 
                       : "text-parchment-400 hover:text-parchment-200"
                   )}
-                  title="Grouper par coût de mana"
+                  title="Group by mana cost"
                 >
                   <Hash className="w-4 h-4" />
                   <span className="text-xs font-medium">CMC</span>
@@ -538,7 +566,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                       ? "bg-arcane-500/20 text-arcane-400" 
                       : "text-parchment-400 hover:text-parchment-200"
                   )}
-                  title="Grouper par type"
+                  title="Group by type"
                 >
                   <Layers className="w-4 h-4" />
                   <span className="text-xs font-medium">Type</span>
@@ -550,20 +578,20 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             <Link href={`/decks/${id}/playtest`}>
               <Button variant="outline" disabled={deck.cards.length === 0}>
                 <FlaskConical className="w-4 h-4 mr-2" />
-                Tester
+                Test
               </Button>
             </Link>
 
             {/* Duplicate button */}
             <Button variant="outline" onClick={handleOpenDuplicateModal}>
               <Copy className="w-4 h-4 mr-2" />
-              Dupliquer
+              Duplicate
             </Button>
 
             {/* Edit button */}
             <Button variant="outline" onClick={handleOpenEditModal}>
               <Settings2 className="w-4 h-4 mr-2" />
-              Modifier
+              Edit
             </Button>
 
             {/* Export dropdown */}
@@ -584,7 +612,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             <Link href="/">
               <Button>
                 <Search className="w-4 h-4 mr-2" />
-                Ajouter
+                Add
               </Button>
             </Link>
           </div>
@@ -613,40 +641,40 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                 {deck.cards.length > 0 && (
                   <SelectItem value="playtest">
                     <div className="flex items-center gap-2">
-                      <FlaskConical className="w-4 h-4" /> Tester
+                      <FlaskConical className="w-4 h-4" /> Test
                     </div>
                   </SelectItem>
                 )}
                 <SelectItem value="edit">
                   <div className="flex items-center gap-2">
-                    <Settings2 className="w-4 h-4" /> Modifier
+                    <Settings2 className="w-4 h-4" /> Edit
                   </div>
                 </SelectItem>
                 <SelectItem value="duplicate">
                   <div className="flex items-center gap-2">
-                    <Copy className="w-4 h-4" /> Dupliquer
+                    <Copy className="w-4 h-4" /> Duplicate
                   </div>
                 </SelectItem>
                 <SelectItem value="view-list">
                   <div className="flex items-center gap-2">
-                    <List className="w-4 h-4" /> Vue liste {viewMode === 'list' && '✓'}
+                    <List className="w-4 h-4" /> List view {viewMode === 'list' && '✓'}
                   </div>
                 </SelectItem>
                 <SelectItem value="view-visual">
                   <div className="flex items-center gap-2">
-                    <LayoutGrid className="w-4 h-4" /> Vue visuelle {viewMode === 'visual' && '✓'}
+                    <LayoutGrid className="w-4 h-4" /> Visual view {viewMode === 'visual' && '✓'}
                   </div>
                 </SelectItem>
                 {viewMode === 'visual' && (
                   <>
                     <SelectItem value="group-cmc">
                       <div className="flex items-center gap-2">
-                        <Hash className="w-4 h-4" /> Par CMC {groupBy === 'cmc' && '✓'}
+                        <Hash className="w-4 h-4" /> By CMC {groupBy === 'cmc' && '✓'}
                       </div>
                     </SelectItem>
                     <SelectItem value="group-type">
                       <div className="flex items-center gap-2">
-                        <Layers className="w-4 h-4" /> Par type {groupBy === 'type' && '✓'}
+                        <Layers className="w-4 h-4" /> By type {groupBy === 'type' && '✓'}
                       </div>
                     </SelectItem>
                   </>
@@ -674,7 +702,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                 ? "border-dungeon-600 hover:border-gold-500 cursor-pointer" 
                 : "border-dungeon-700 cursor-default"
             )}
-            title={deck.cards.length > 0 ? "Changer la couverture" : "Ajouter des cartes pour définir une couverture"}
+            title={deck.cards.length > 0 ? "Change cover" : "Add cards to set a cover"}
           >
             {deck.coverImage ? (
               <Image
@@ -717,13 +745,13 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                   {deck.format}
                 </span>
               )}
-              <span className="text-parchment-400">{totalCards} cartes</span>
+              <span className="text-parchment-400">{totalCards} cards</span>
               <span className="font-semibold flex items-center gap-1">
-                <span className="text-emerald-400" title="Prix minimum (versions les moins chères)">
+                <span className="text-emerald-400" title="Minimum price (cheapest versions)">
                   {formatPrice(deck.minTotalPrice, 'EUR')}
                 </span>
                 <span className="text-dungeon-500">/</span>
-                <span className="text-gold-400" title="Prix réel (versions dans le deck)">
+                <span className="text-gold-400" title="Actual price (versions in deck)">
                   {formatPrice(deck.totalPrice, 'EUR')}
                 </span>
               </span>
@@ -744,7 +772,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                     borderColor: tag.color,
                     color: tag.color,
                   }}
-                  title={`Retirer le tag "${tag.name}"`}
+                  title={`Remove tag "${tag.name}"`}
                 >
                   {tag.name}
                   <X className="w-2.5 h-2.5" />
@@ -763,7 +791,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                       borderColor: tag.color,
                       color: tag.color,
                     }}
-                    title={`Ajouter le tag "${tag.name}"`}
+                    title={`Add tag "${tag.name}"`}
                   >
                     <Plus className="w-2.5 h-2.5" />
                     {tag.name}
@@ -774,7 +802,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               {/* Empty state */}
               {(!tagsData?.tags || tagsData.tags.length === 0) && (!deck.tags || deck.tags.length === 0) && (
                 <span className="text-xs text-dungeon-500 italic">
-                  Aucun tag disponible
+                  No tags available
                 </span>
               )}
             </div>
@@ -812,7 +840,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
         <DeckVisualView 
           cards={deck.cards}
           groupBy={groupBy}
-          onCardClick={setSelectedCard}
+          onCardClick={setSelectedDeckCard}
         />
       )}
 
@@ -840,7 +868,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                     >
                       {/* Clickable Card Area (Image + Info) */}
                       <button
-                        onClick={() => setSelectedCard(dc.card)}
+                        onClick={() => setSelectedDeckCard(dc)}
                         className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
                       >
                         {/* Card Image Thumbnail */}
@@ -998,8 +1026,25 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
 
       {/* Card Detail Modal */}
       <CardDetailModal
-        card={selectedCard}
-        onClose={() => setSelectedCard(null)}
+        card={selectedDeckCard?.card ?? null}
+        onClose={() => setSelectedDeckCard(null)}
+        onPrev={selectedDeckCardIndex > 0 ? handleNavPrev : undefined}
+        onNext={selectedDeckCardIndex >= 0 && selectedDeckCardIndex < orderedDeckCards.length - 1 ? handleNavNext : undefined}
+        currentIndex={selectedDeckCardIndex >= 0 ? selectedDeckCardIndex + 1 : undefined}
+        totalCards={orderedDeckCards.length}
+        deckCard={selectedDeckCard ? {
+          deckId: id,
+          cardId: selectedDeckCard.cardId,
+          quantity: selectedDeckCard.quantity,
+          category: selectedDeckCard.category,
+        } : undefined}
+        onDeckCardUpdate={() => {
+          queryClient.invalidateQueries({ queryKey: ['deck', id] })
+        }}
+        onDeckCardRemoved={() => {
+          setSelectedDeckCard(null)
+          queryClient.invalidateQueries({ queryKey: ['deck', id] })
+        }}
       />
 
       {/* Edit Deck Modal */}
@@ -1008,16 +1053,16 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-arcane-500" />
-              Modifier le Grimoire
+              Edit Spellbook
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2 sm:py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name" className="font-medieval text-sm sm:text-base">Nom</Label>
+              <Label htmlFor="edit-name" className="font-medieval text-sm sm:text-base">Name</Label>
               <Input
                 id="edit-name"
-                placeholder="Nommer votre grimoire..."
+                placeholder="Name your spellbook..."
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 autoFocus
@@ -1028,13 +1073,13 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             {/* Owner and Format in a row on desktop, stacked on mobile */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-owner" className="font-medieval text-sm sm:text-base">Propriétaire</Label>
+                <Label htmlFor="edit-owner" className="font-medieval text-sm sm:text-base">Owner</Label>
                 <Select value={editOwnerId} onValueChange={setEditOwnerId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner" />
+                    <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Aucun</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {ownersData?.owners?.map((owner: Owner) => (
                       <SelectItem key={owner.id} value={owner.id}>
                         <div className="flex items-center gap-2">
@@ -1054,10 +1099,10 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                 <Label htmlFor="edit-format" className="font-medieval text-sm sm:text-base">Format</Label>
                 <Select value={editFormat} onValueChange={setEditFormat}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner" />
+                    <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Aucun</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {FORMATS.map((format) => (
                       <SelectItem key={format.code} value={format.code}>
                         {format.name}
@@ -1072,7 +1117,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               <Label htmlFor="edit-description" className="font-medieval text-sm sm:text-base">Description</Label>
               <Input
                 id="edit-description"
-                placeholder="Décrire ce grimoire..."
+                placeholder="Describe this spellbook..."
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 className="text-base"
@@ -1083,11 +1128,11 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             <div className="space-y-2">
               <Label className="font-medieval flex items-center gap-2 text-sm sm:text-base">
                 <ImageIcon className="w-4 h-4" />
-                Image de couverture
+                Cover image
               </Label>
               {deck.cards.length === 0 ? (
                 <p className="text-sm text-parchment-500 italic">
-                  Ajouter des cartes pour choisir une couverture.
+                  Add cards to choose a cover.
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -1097,21 +1142,21 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                       <div className="relative w-12 h-16 sm:w-16 sm:h-22 rounded overflow-hidden flex-shrink-0">
                         <Image
                           src={editCoverImage}
-                          alt="Couverture actuelle"
+                          alt="Current cover"
                           fill
                           className="object-cover"
                           sizes="64px"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gold-400 font-medium">Couverture actuelle</p>
-                        <p className="text-xs text-parchment-500 hidden sm:block">Cliquer sur une carte pour changer</p>
+                        <p className="text-sm text-gold-400 font-medium">Current cover</p>
+                        <p className="text-xs text-parchment-500 hidden sm:block">Click on a card to change</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setEditCoverImage(null)}
                         className="p-2 rounded hover:bg-dragon-600/50 text-parchment-400 hover:text-dragon-400 transition-colors flex-shrink-0"
-                        title="Retirer la couverture"
+                        title="Remove cover"
                       >
                         <X className="w-5 h-5" />
                       </button>
@@ -1168,7 +1213,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="secondary" onClick={() => setShowEditModal(false)} className="flex-1 sm:flex-none">
-              Annuler
+              Cancel
             </Button>
             <Button
               variant="arcane"
@@ -1176,7 +1221,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               disabled={!editName.trim() || updateDeckMutation.isPending}
               className="flex-1 sm:flex-none"
             >
-              {updateDeckMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder'}
+              {updateDeckMutation.isPending ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1188,7 +1233,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-gold-500" />
-              Choisir la couverture
+              Choose cover
             </DialogTitle>
           </DialogHeader>
 
@@ -1199,15 +1244,15 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="relative w-14 h-20 sm:w-20 sm:h-28 rounded overflow-hidden flex-shrink-0">
                   <Image
                     src={deck.coverImage}
-                    alt="Couverture actuelle"
+                    alt="Current cover"
                     fill
                     className="object-cover"
                     sizes="80px"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-gold-400 font-medium text-sm sm:text-base">Couverture actuelle</p>
-                  <p className="text-xs sm:text-sm text-parchment-500 hidden sm:block">Sélectionner une carte ci-dessous</p>
+                  <p className="text-gold-400 font-medium text-sm sm:text-base">Current cover</p>
+                  <p className="text-xs sm:text-sm text-parchment-500 hidden sm:block">Select a card below</p>
                 </div>
                 <Button
                   variant="outline"
@@ -1217,7 +1262,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                   className="text-dragon-400 border-dragon-500/50 hover:bg-dragon-500/20 flex-shrink-0"
                 >
                   <X className="w-4 h-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Retirer</span>
+                  <span className="hidden sm:inline">Remove</span>
                 </Button>
               </div>
             )}
@@ -1274,7 +1319,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
 
           <DialogFooter className="flex-shrink-0">
             <Button variant="secondary" onClick={() => setShowCoverModal(false)} className="w-full sm:w-auto">
-              Fermer
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1286,19 +1331,19 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Copy className="w-5 h-5 text-arcane-500" />
-              Dupliquer le deck
+              Duplicate deck
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <p className="text-sm text-parchment-400">
-              Une copie du deck sera créée en <span className="text-arcane-400 font-medium">mode construction</span>.
+              A copy of the deck will be created in <span className="text-arcane-400 font-medium">build mode</span>.
             </p>
             <div className="space-y-2">
-              <Label htmlFor="duplicate-name" className="font-medieval">Nom du nouveau deck</Label>
+              <Label htmlFor="duplicate-name" className="font-medieval">New deck name</Label>
               <Input
                 id="duplicate-name"
-                placeholder="Nom du deck..."
+                placeholder="Deck name..."
                 value={duplicateName}
                 onChange={(e) => setDuplicateName(e.target.value)}
                 autoFocus
@@ -1314,7 +1359,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="secondary" onClick={() => setShowDuplicateModal(false)} className="flex-1 sm:flex-none">
-              Annuler
+              Cancel
             </Button>
             <Button
               variant="arcane"
@@ -1322,7 +1367,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               disabled={!duplicateName.trim() || duplicateDeckMutation.isPending}
               className="flex-1 sm:flex-none"
             >
-              {duplicateDeckMutation.isPending ? 'Duplication...' : 'Dupliquer'}
+              {duplicateDeckMutation.isPending ? 'Duplicating...' : 'Duplicate'}
             </Button>
           </DialogFooter>
         </DialogContent>

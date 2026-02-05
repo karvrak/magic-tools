@@ -250,15 +250,15 @@ export function QuickAddProvider({ children }: { children: ReactNode }) {
         })
 
         toast({
-          title: 'Ajouté à la collection',
+          title: 'Added to collection',
           description: `${quantity}x ${cardName}`,
         })
 
         return true
       } catch (error) {
         toast({
-          title: 'Erreur',
-          description: error instanceof Error ? error.message : 'Impossible d\'ajouter la carte',
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Unable to add card',
           variant: 'destructive',
         })
         return false
@@ -268,8 +268,8 @@ export function QuickAddProvider({ children }: { children: ReactNode }) {
     // Handle deck target
     if (!activeDeck) {
       toast({
-        title: 'Pas de deck actif',
-        description: 'Sélectionnez un deck dans le menu Quick Add.',
+        title: 'No active deck',
+        description: 'Select a deck in the Quick Add menu.',
         variant: 'destructive',
       })
       return false
@@ -284,15 +284,15 @@ export function QuickAddProvider({ children }: { children: ReactNode }) {
       })
 
       toast({
-        title: `Ajouté à ${activeDeck.name}`,
+        title: `Added to ${activeDeck.name}`,
         description: `${quantity}x ${cardName}`,
       })
 
       return true
     } catch (error) {
       toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Impossible d\'ajouter la carte',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Unable to add card',
         variant: 'destructive',
       })
       return false

@@ -85,16 +85,16 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
       queryClient.invalidateQueries({ queryKey: ['collection'] })
       queryClient.invalidateQueries({ queryKey: ['decks-import-status'] })
       toast({
-        title: 'Import terminé',
-        description: `${result.created} cartes ajoutées, ${result.updated} mises à jour, ${result.skipped} ignorées`,
+        title: 'Import complete',
+        description: `${result.created} cards added, ${result.updated} updated, ${result.skipped} skipped`,
       })
       setSelectedDecks(new Set())
       onClose()
     },
     onError: () => {
       toast({
-        title: 'Erreur',
-        description: "L'import a échoué",
+        title: 'Error',
+        description: 'Import failed',
         variant: 'destructive',
       })
     },
@@ -160,7 +160,7 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
           <div className="flex items-center justify-between p-4 border-b border-dungeon-700">
             <div className="flex items-center gap-3">
               <Upload className="w-5 h-5 text-arcane-500" />
-              <h2 className="font-display text-lg text-gold-400">Importer des decks</h2>
+              <h2 className="font-display text-lg text-gold-400">Import decks</h2>
             </div>
             <button
               onClick={onClose}
@@ -178,7 +178,7 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
               </div>
             ) : data?.decks.length === 0 ? (
               <div className="text-center py-12 text-parchment-400">
-                Aucun deck trouvé
+                No decks found
               </div>
             ) : (
               <>
@@ -190,13 +190,13 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
                         <span className="text-gold-400 font-semibold">{data.summary.totalDecks}</span> decks
                       </span>
                       <span className="text-emerald-400">
-                        {data.summary.fullyImported} importés
+                        {data.summary.fullyImported} imported
                       </span>
                       <span className="text-yellow-400">
-                        {data.summary.partiallyImported} partiels
+                        {data.summary.partiallyImported} partial
                       </span>
                       <span className="text-red-400">
-                        {data.summary.notImported} non importés
+                        {data.summary.notImported} not imported
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
                         onClick={selectAllNotImported}
                         className="h-7 text-xs"
                       >
-                        Sélectionner non importés
+                        Select not imported
                       </Button>
                       {selectedDecks.size > 0 && (
                         <Button
@@ -215,7 +215,7 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
                           onClick={clearSelection}
                           className="h-7 text-xs text-dragon-400"
                         >
-                          Effacer
+                          Clear
                         </Button>
                       )}
                     </div>
@@ -285,7 +285,7 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
                               </span>
                             )}
                             <span className="text-parchment-500">
-                              {stats.uniqueCards} cartes uniques
+                              {stats.uniqueCards} unique cards
                             </span>
                           </div>
                         </div>
@@ -295,23 +295,23 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
                           {stats.isFullyImported ? (
                             <div className="flex items-center gap-1.5 text-emerald-400">
                               <CheckCircle2 className="w-4 h-4" />
-                              <span className="text-sm">Importé</span>
+                              <span className="text-sm">Imported</span>
                             </div>
                           ) : stats.isPartiallyImported ? (
                             <div>
                               <div className="flex items-center gap-1.5 text-yellow-400">
                                 <AlertCircle className="w-4 h-4" />
-                                <span className="text-sm">Partiel</span>
+                                <span className="text-sm">Partial</span>
                               </div>
                               <span className="text-xs text-parchment-500">
-                                +{stats.newCardsToImport} à importer
+                                +{stats.newCardsToImport} to import
                               </span>
                             </div>
                           ) : (
                             <div>
-                              <span className="text-sm text-red-400">Non importé</span>
+                              <span className="text-sm text-red-400">Not imported</span>
                               <span className="text-xs text-parchment-500 block">
-                                {stats.totalCards} cartes
+                                {stats.totalCards} cards
                               </span>
                             </div>
                           )}
@@ -346,18 +346,17 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
                   onChange={(e) => setOnlyMissing(e.target.checked)}
                   className="rounded border-dungeon-500"
                 />
-                Seulement les cartes manquantes
+                Only missing cards
               </label>
               {selectedDecks.size > 0 && (
                 <span className="text-sm text-parchment-400">
-                  {selectedDecks.size} deck{selectedDecks.size > 1 ? 's' : ''} sélectionné
-                  {selectedDecks.size > 1 ? 's' : ''} ({cardsToImport} cartes)
+                  {selectedDecks.size} deck{selectedDecks.size > 1 ? 's' : ''} selected ({cardsToImport} cards)
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={onClose}>
-                Annuler
+                Cancel
               </Button>
               <Button
                 onClick={handleImport}
@@ -371,7 +370,7 @@ export function ImportDecksModal({ isOpen, onClose, ownerId }: ImportDecksModalP
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    Importer
+                    Import
                   </>
                 )}
               </Button>

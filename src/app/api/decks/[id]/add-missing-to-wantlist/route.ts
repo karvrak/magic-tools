@@ -142,7 +142,7 @@ export async function POST(
               ownerId: deck.ownerId,
               quantity: missing,
               priority: 'medium',
-              notes: `Pour deck: ${deck.name}`,
+              notes: `For deck: ${deck.name}`,
             },
           })
           addedCards.push({
@@ -160,8 +160,8 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: addedCards.length > 0
-        ? `${addedCards.length} carte(s) ajoutée(s) à la wantlist`
-        : 'Toutes les cartes sont déjà dans la collection ou la wantlist',
+        ? `${addedCards.length} card(s) added to wantlist`
+        : 'All cards are already in the collection or wantlist',
       added: addedCards,
       totalAdded,
       deckName: deck.name,

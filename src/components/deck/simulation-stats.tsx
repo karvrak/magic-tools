@@ -70,12 +70,12 @@ interface SimulationStatsProps {
 }
 
 const COLOR_STYLES: Record<string, { bg: string; text: string; name: string }> = {
-  W: { bg: 'bg-amber-100', text: 'text-amber-900', name: 'Blanc' },
-  U: { bg: 'bg-blue-500', text: 'text-white', name: 'Bleu' },
-  B: { bg: 'bg-zinc-800', text: 'text-white', name: 'Noir' },
-  R: { bg: 'bg-red-500', text: 'text-white', name: 'Rouge' },
-  G: { bg: 'bg-green-600', text: 'text-white', name: 'Vert' },
-  C: { bg: 'bg-gray-400', text: 'text-gray-900', name: 'Incolore' },
+  W: { bg: 'bg-amber-100', text: 'text-amber-900', name: 'White' },
+  U: { bg: 'bg-blue-500', text: 'text-white', name: 'Blue' },
+  B: { bg: 'bg-zinc-800', text: 'text-white', name: 'Black' },
+  R: { bg: 'bg-red-500', text: 'text-white', name: 'Red' },
+  G: { bg: 'bg-green-600', text: 'text-white', name: 'Green' },
+  C: { bg: 'bg-gray-400', text: 'text-gray-900', name: 'Colorless' },
   ANY: { bg: 'bg-gradient-to-r from-amber-400 via-blue-400 to-green-400', text: 'text-white', name: 'Any' },
 }
 
@@ -119,7 +119,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-medieval text-lg text-gold-400 flex items-center gap-2">
             <FlaskConical className="w-5 h-5" />
-            Test Automatique
+            Auto Test
             <Link 
               href="/help#simulation-stats"
               className="ml-1 p-1 rounded-full hover:bg-dungeon-700 transition-colors"
@@ -132,7 +132,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
         
         <div className="text-center py-6">
           <p className="text-parchment-400 mb-4">
-            Lancez une simulation de 10 000 tirages pour analyser la consistance de votre deck.
+            Run a 10,000 draw simulation to analyze your deck consistency.
           </p>
           
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -145,7 +145,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
                   : "text-parchment-400 hover:text-parchment-200"
               )}
             >
-              Basique
+              Basic
             </button>
             <button
               onClick={() => setAdvancedMode(true)}
@@ -156,14 +156,14 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
                   : "text-parchment-400 hover:text-parchment-200"
               )}
             >
-              Avancé
+              Advanced
             </button>
           </div>
-          
+
           <p className="text-xs text-parchment-500 mb-4">
-            {advancedMode 
+            {advancedMode
               ? "🔮 Fetchlands, bounce lands, MDFCs, fast/check lands, color fixing"
-              : "📊 Compte les terrains (tapped lands inclus)"}
+              : "📊 Counts lands (tapped lands included)"}
           </p>
           
           <Button
@@ -174,12 +174,12 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
             {simulateMutation.isPending ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                Simulation en cours...
+                Running simulation...
               </>
             ) : (
               <>
                 <FlaskConical className="w-4 h-4" />
-                Lancer la simulation
+                Run simulation
               </>
             )}
           </Button>
@@ -218,7 +218,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
         <div className="flex items-center gap-3">
           <h3 className="font-medieval text-lg text-gold-400 flex items-center gap-2">
             <FlaskConical className="w-5 h-5" />
-            Test Automatique
+            Auto Test
             <Link 
               href="/help#simulation-stats"
               className="ml-1 p-1 rounded-full hover:bg-dungeon-700 transition-colors"
@@ -233,7 +233,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
               ? "bg-arcane-500/20 text-arcane-400" 
               : "bg-dungeon-700 text-parchment-400"
           )}>
-            {simulation.isAdvanced ? "Avancé" : "Basique"}
+            {simulation.isAdvanced ? "Advanced" : "Basic"}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -259,10 +259,10 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
                 advancedMode ? "bg-arcane-500/30 text-arcane-400" : "text-parchment-500"
               )}
             >
-              Avancé
+              Advanced
             </button>
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -275,7 +275,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
             ) : (
               <RefreshCw className="w-3 h-3" />
             )}
-            <span className="hidden sm:inline">Relancer</span>
+            <span className="hidden sm:inline">Rerun</span>
           </Button>
         </div>
       </div>
@@ -284,28 +284,28 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           icon={Mountain}
-          label="Terrains en main"
+          label="Lands in hand"
           value={simulation.avgLandsInHand.toFixed(1)}
-          subtext="moyenne sur 7 cartes"
+          subtext="average over 7 cards"
           color="text-lime-400"
         />
         <StatCard
           icon={Sparkles}
-          label="Sorts en main"
+          label="Spells in hand"
           value={simulation.avgNonLandsInHand.toFixed(1)}
-          subtext={`CMC moy: ${simulation.avgCmcInHand.toFixed(1)}`}
+          subtext={`Avg CMC: ${simulation.avgCmcInHand.toFixed(1)}`}
           color="text-arcane-400"
         />
         <StatCard
           icon={Target}
-          label="Mains gardables"
+          label="Keepable hands"
           value={`${simulation.pctKeepableHands.toFixed(0)}%`}
           subtext="2-4 terrains"
           color="text-gold-400"
         />
         <StatCard
           icon={TrendingUp}
-          label="Jouable T1"
+          label="Playable T1"
           value={`${simulation.pctTurn1Play.toFixed(0)}%`}
           subtext={`moy: ${simulation.avgPlayablesTurn1.toFixed(1)} cartes`}
           color="text-green-400"
@@ -315,16 +315,16 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
       {/* Secondary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
-          label="Jouable T2"
+          label="Playable T2"
           value={`${simulation.pctTurn2Play.toFixed(0)}%`}
           subtext={`moy: ${simulation.avgPlayablesTurn2.toFixed(1)} cartes`}
           color="text-green-400"
           small
         />
         <StatCard
-          label="Jouable T3"
+          label="Playable T3"
           value={simulation.avgPlayablesTurn3.toFixed(1)}
-          subtext="cartes CMC≤3"
+          subtext="cards CMC≤3"
           color="text-green-400"
           small
         />
@@ -350,7 +350,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
         <div className="p-3 rounded-lg bg-dungeon-800 border border-dungeon-600">
           <div className="flex items-center gap-2 text-parchment-400 text-sm mb-2">
             <Layers className="w-4 h-4" />
-            Mana réellement disponible (après tapped lands)
+            Actual mana available (after tapped lands)
           </div>
           <div className="flex gap-4">
             <div className="text-center">
@@ -374,7 +374,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
         <div className="p-3 rounded-lg bg-dungeon-800 border border-dungeon-600">
           <div className="flex items-center gap-2 text-parchment-400 text-sm mb-3">
             <Palette className="w-4 h-4" />
-            Analyse du Color Fixing
+            Color Fixing Analysis
           </div>
           
           <div className="space-y-2">
@@ -400,7 +400,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
                   <div className="flex-1">
                     <div className="flex justify-between text-xs">
                       <span className="text-parchment-400">
-                        {sources.toFixed(0)} sources / {needs.toFixed(0)} symboles
+                        {sources.toFixed(0)} sources / {needs.toFixed(0)} symbols
                       </span>
                       <span className={cn(
                         "font-medium",
@@ -427,7 +427,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
           {/* Color fix success rates */}
           {simulation.pctColorFixedT1 !== undefined && (
             <div className="mt-3 pt-3 border-t border-dungeon-600">
-              <p className="text-xs text-parchment-500 mb-2">% de mains avec les bonnes couleurs</p>
+              <p className="text-xs text-parchment-500 mb-2">% hands with correct colors</p>
               <div className="flex gap-4">
                 <div>
                   <span className="text-sm font-medium text-parchment-200">T1: </span>
@@ -467,7 +467,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
         <div className="p-3 rounded-lg bg-dungeon-800 border border-dungeon-600">
           <div className="flex items-center gap-2 text-parchment-400 text-sm mb-2">
             <Mountain className="w-4 h-4" />
-            Répartition des terrains
+            Land breakdown
           </div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(simulation.landBreakdown).map(([type, count]) => {
@@ -481,7 +481,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
                 taplands: 'Tapland',
                 mdfc: 'MDFC',
                 bouncelands: 'Bounce',
-                other: 'Autre'
+                other: 'Other'
               }
               return (
                 <span 
@@ -498,7 +498,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
 
       {/* Lands Distribution Chart */}
       <div>
-        <p className="text-sm text-parchment-400 mb-2">Distribution des terrains (main initiale)</p>
+        <p className="text-sm text-parchment-400 mb-2">Land distribution (opening hand)</p>
         <div className="flex gap-1 items-end" style={{ height: '64px' }}>
           {[0, 1, 2, 3, 4, 5, 6, 7].map((lands) => {
             const count = Number(simulation.landsDistribution[lands] || 0)
@@ -545,7 +545,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
             className="flex items-center gap-2 text-sm text-parchment-400 hover:text-parchment-200 transition-colors"
           >
             <Hand className="w-4 h-4" />
-            {showSampleHands ? 'Masquer' : 'Voir'} les exemples de mains
+            {showSampleHands ? 'Hide' : 'Show'} sample hands
           </button>
           
           {showSampleHands && (
@@ -554,7 +554,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
               {simulation.sampleKeepHands && simulation.sampleKeepHands.length > 0 && (
                 <div>
                   <p className="text-xs text-green-400 flex items-center gap-1 mb-2">
-                    <Check className="w-3 h-3" /> Exemples de mains gardables
+                    <Check className="w-3 h-3" /> Sample keepable hands
                   </p>
                   <div className="space-y-2">
                     {simulation.sampleKeepHands.map((hand, idx) => (
@@ -570,7 +570,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
                           ))}
                         </div>
                         <p className="text-[10px] text-parchment-500 mt-1">
-                          {hand.lands} terrains • {hand.t1Plays} jouable(s) T1
+                          {hand.lands} lands • {hand.t1Plays} T1 playable(s)
                         </p>
                       </div>
                     ))}
@@ -582,7 +582,7 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
               {simulation.sampleMulliganHands && simulation.sampleMulliganHands.length > 0 && (
                 <div>
                   <p className="text-xs text-dragon-400 flex items-center gap-1 mb-2">
-                    <X className="w-3 h-3" /> Exemples de mains à mulligan
+                    <X className="w-3 h-3" /> Sample mulligan hands
                   </p>
                   <div className="space-y-2">
                     {simulation.sampleMulliganHands.map((hand, idx) => (
@@ -598,11 +598,11 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
                           ))}
                         </div>
                         <p className="text-[10px] text-parchment-500 mt-1">
-                          {hand.lands} terrains • Raison: {
+                          {hand.lands} lands • Reason: {
                             hand.reason === 'screw' ? '🔴 Mana screw' :
                             hand.reason === 'flood' ? '🔵 Mana flood' :
-                            hand.reason === 'no_colors' ? '🎨 Mauvaises couleurs' :
-                            '❌ Pas de jeu T1-2'
+                            hand.reason === 'no_colors' ? '🎨 Wrong colors' :
+                            '❌ No T1-2 plays'
                           }
                         </p>
                       </div>

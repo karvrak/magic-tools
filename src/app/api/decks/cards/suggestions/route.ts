@@ -10,7 +10,7 @@ interface CardSuggestion {
 }
 
 // GET /api/decks/cards/suggestions - Get card name suggestions for deck filtering
-// Utilise la vue matérialisée deck_card_names pour les performances
+// Uses the deck_card_names materialized view for performance
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -67,14 +67,14 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching card suggestions:', error)
     
-    // Si la vue n'existe pas, fallback sur une requête directe (moins performante)
+    // If the view does not exist, fallback to a direct query (less performant)
     if (error instanceof Error && error.message.includes('deck_card_names')) {
       try {
         const { searchParams } = new URL(request.url)
         const query = searchParams.get('q')?.toLowerCase().trim() || ''
         const limit = Math.min(parseInt(searchParams.get('limit') || '15'), 50)
         
-        // Fallback query sans la vue
+        // Fallback query without the view
         const results = await prisma.$queryRaw<{
           name: string
           oracleId: string

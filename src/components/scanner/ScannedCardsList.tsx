@@ -32,9 +32,9 @@ export function ScannedCardsList({
     return (
       <div className="flex-1 flex items-center justify-center p-8 text-center">
         <div>
-          <p className="text-parchment-400 mb-2">Aucune carte scannée</p>
+          <p className="text-parchment-400 mb-2">No scanned cards</p>
           <p className="text-parchment-500 text-sm">
-            Retournez au mode scan pour ajouter des cartes
+            Return to scan mode to add cards
           </p>
         </div>
       </div>
@@ -76,7 +76,7 @@ function ScannedCardItem({
       icon: Check,
       color: 'text-emerald-400',
       bg: 'bg-emerald-900/20 border-emerald-600/30',
-      label: 'Reconnu',
+      label: 'Recognized',
     },
     ambiguous: {
       icon: AlertTriangle,
@@ -88,19 +88,19 @@ function ScannedCardItem({
       icon: XCircle,
       color: 'text-dragon-400',
       bg: 'bg-dragon-900/20 border-dragon-600/30',
-      label: 'Non trouvé',
+      label: 'Not found',
     },
     pending: {
       icon: AlertTriangle,
       color: 'text-parchment-400',
       bg: 'bg-dungeon-800 border-dungeon-600',
-      label: 'En attente',
+      label: 'Pending',
     },
     manual: {
       icon: Check,
       color: 'text-arcane-400',
       bg: 'bg-arcane-900/20 border-arcane-600/30',
-      label: 'Manuel',
+      label: 'Manual',
     },
   }
 
@@ -185,7 +185,7 @@ function ScannedCardItem({
               <button
                 onClick={() => onRemove(card.id)}
                 className="p-1.5 text-dragon-400 hover:text-dragon-300 ml-auto"
-                title="Supprimer"
+                title="Delete"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -198,7 +198,7 @@ function ScannedCardItem({
               <button
                 onClick={() => onRemove(card.id)}
                 className="p-1.5 text-dragon-400 hover:text-dragon-300"
-                title="Supprimer"
+                title="Delete"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -220,7 +220,7 @@ function ScannedCardItem({
                 showCandidates && 'rotate-180'
               )}
             />
-            {showCandidates ? 'Masquer' : 'Autres correspondances'} ({card.candidates.length - 1})
+            {showCandidates ? 'Hide' : 'Other matches'} ({card.candidates.length - 1})
           </button>
 
           {showCandidates && (

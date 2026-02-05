@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
 // GET /api/search/sets - Get set suggestions for autocomplete
-// Utilise la vue matérialisée card_sets pour les performances
+// Uses the card_sets materialized view for performance
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching set suggestions:', error)
     
-    // Si la vue n'existe pas, retourner une liste vide
+    // If the view does not exist, return an empty list
     if (error instanceof Error && error.message.includes('card_sets')) {
       return NextResponse.json({ suggestions: [], error: 'View not initialized' })
     }

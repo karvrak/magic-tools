@@ -203,13 +203,13 @@ export async function POST(request: NextRequest) {
     const warnings: string[] = []
 
     if (totalCommons < 7) {
-      warnings.push(`Seulement ${totalCommons} communes disponibles (7 recommandées par booster)`)
+      warnings.push(`Only ${totalCommons} commons available (7 recommended per booster)`)
     }
     if (totalUncommons < 3) {
-      warnings.push(`Seulement ${totalUncommons} uncommunes disponibles (3 recommandées par booster)`)
+      warnings.push(`Only ${totalUncommons} uncommons available (3 recommended per booster)`)
     }
     if (totalRares + totalMythics < 1) {
-      warnings.push(`Aucune rare ou mythique disponible`)
+      warnings.push(`No rare or mythic available`)
     }
 
     // Create a mutable pool that tracks remaining quantities

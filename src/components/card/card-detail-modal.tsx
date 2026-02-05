@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Plus, Heart, Archive, ExternalLink, Loader2, Sparkles, Crown, Star, TrendingDown, TrendingUp, Coins, RotateCw, ChevronLeft, ChevronRight, Zap, ShoppingCart, PackageCheck, Trash2, ArrowRightCircle } from 'lucide-react'
+import { Plus, Minus, Heart, Archive, ExternalLink, Loader2, Sparkles, Crown, Star, TrendingDown, TrendingUp, Coins, RotateCw, ChevronLeft, ChevronRight, Zap, ShoppingCart, PackageCheck, Trash2, ArrowRightCircle, Layers } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AddToDeckModal } from './add-to-deck-modal'
 import { useQuickAdd } from '@/contexts/quick-add'
@@ -62,6 +62,13 @@ interface WantlistItemData {
   notes: string | null
 }
 
+interface DeckCardData {
+  deckId: string
+  cardId: string
+  quantity: number
+  category: string
+}
+
 interface CardDetailModalProps {
   card: CardWithPrice | null
   onClose: () => void
@@ -74,6 +81,10 @@ interface CardDetailModalProps {
   onNext?: () => void
   currentIndex?: number
   totalCards?: number
+  // Deck-specific props
+  deckCard?: DeckCardData | null
+  onDeckCardUpdate?: () => void
+  onDeckCardRemoved?: () => void
   // Wantlist-specific props
   wantlistItem?: WantlistItemData | null
   onWantlistUpdate?: () => void
@@ -121,6 +132,9 @@ export function CardDetailModal({
   onNext,
   currentIndex: propCurrentIndex,
   totalCards,
+  deckCard,
+  onDeckCardUpdate,
+  onDeckCardRemoved,
   wantlistItem,
   onWantlistUpdate
 }: CardDetailModalProps) {
@@ -131,9 +145,72 @@ export function CardDetailModal({
   const [isFlipped, setIsFlipped] = useState(false)
   const [isQuickAdding, setIsQuickAdding] = useState(false)
   const [isWantlistUpdating, setIsWantlistUpdating] = useState(false)
+  const [isDeckUpdating, setIsDeckUpdating] = useState(false)
+  const [currentDeckQuantity, setCurrentDeckQuantity] = useState(deckCard?.quantity ?? 0)
   const { toast } = useToast()
   const { quickAdd, activeDeck, isReady: quickAddReady } = useQuickAdd()
   const { activeOwner } = useActiveOwner()
+
+  // Sync deck quantity when deckCard prop changes
+  useEffect(() => {
+    setCurrentDeckQuantity(deckCard?.quantity ?? 0)
+  }, [deckCard?.quantity])
+
+  // Deck card handlers
+  const handleDeckQuantityChange = async (newQuantity: number) => {
+    if (!deckCard || isDeckUpdating) return
+    if (newQuantity <= 0) {
+      handleRemoveFromDeck()
+      return
+    }
+    setIsDeckUpdating(true)
+    setCurrentDeckQuantity(newQuantity)
+    try {
+      const response = await fetch(`/api/decks/${deckCard.deckId}/cards`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardId: deckCard.cardId,
+          quantity: newQuantity,
+          category: deckCard.category,
+        }),
+      })
+      if (response.ok) {
+        onDeckCardUpdate?.()
+      } else {
+        setCurrentDeckQuantity(deckCard.quantity)
+        toast({ title: 'Error', description: 'Failed to update quantity', variant: 'destructive' })
+      }
+    } catch {
+      setCurrentDeckQuantity(deckCard.quantity)
+      toast({ title: 'Error', description: 'Failed to update quantity', variant: 'destructive' })
+    } finally {
+      setIsDeckUpdating(false)
+    }
+  }
+
+  const handleRemoveFromDeck = async () => {
+    if (!deckCard || isDeckUpdating) return
+    setIsDeckUpdating(true)
+    try {
+      const response = await fetch(`/api/decks/${deckCard.deckId}/cards?cardId=${deckCard.cardId}&category=${deckCard.category}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        toast({
+          title: 'Removed from deck',
+          description: card?.printedName || card?.name,
+        })
+        onDeckCardRemoved?.()
+      } else {
+        toast({ title: 'Error', description: 'Failed to remove card', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to remove card', variant: 'destructive' })
+    } finally {
+      setIsDeckUpdating(false)
+    }
+  }
 
   // Calculate current index and navigation availability (support both legacy and simple props)
   const legacyCurrentIndex = cards && card ? cards.findIndex(c => c.id === card.id) : -1
@@ -297,8 +374,8 @@ export function CardDetailModal({
 
       if (response.ok) {
         toast({
-          title: 'Ajouté à la Wantlist',
-          description: `${cardNameToShow} (${displaySetCode.toUpperCase()}) a été ajouté à votre wantlist.`,
+          title: 'Added to Wantlist',
+          description: `${cardNameToShow} (${displaySetCode.toUpperCase()}) has been added to your wantlist.`,
           variant: 'default',
         })
       } else {
@@ -337,8 +414,8 @@ export function CardDetailModal({
 
       if (response.ok) {
         toast({
-          title: 'Ajouté à la Collection',
-          description: `${cardNameToShow} (${displaySetCode.toUpperCase()}) a été ajouté à votre collection.`,
+          title: 'Added to Collection',
+          description: `${cardNameToShow} (${displaySetCode.toUpperCase()}) has been added to your collection.`,
           variant: 'default',
         })
       } else {
@@ -387,13 +464,13 @@ export function CardDetailModal({
       })
       if (response.ok) {
         toast({
-          title: wantlistItem.isOrdered ? 'Commande annulée' : 'Marquée comme commandée',
+          title: wantlistItem.isOrdered ? 'Order cancelled' : 'Marked as ordered',
           description: card?.printedName || card?.name,
         })
         onWantlistUpdate?.()
       }
     } catch {
-      toast({ title: 'Erreur', variant: 'destructive' })
+      toast({ title: 'Error', variant: 'destructive' })
     } finally {
       setIsWantlistUpdating(false)
     }
@@ -413,13 +490,13 @@ export function CardDetailModal({
       })
       if (response.ok) {
         toast({
-          title: wantlistItem.isReceived ? 'Réception annulée' : 'Marquée comme reçue',
+          title: wantlistItem.isReceived ? 'Receipt cancelled' : 'Marked as received',
           description: card?.printedName || card?.name,
         })
         onWantlistUpdate?.()
       }
     } catch {
-      toast({ title: 'Erreur', variant: 'destructive' })
+      toast({ title: 'Error', variant: 'destructive' })
     } finally {
       setIsWantlistUpdating(false)
     }
@@ -453,14 +530,14 @@ export function CardDetailModal({
 
       if (deleteResponse.ok) {
         toast({
-          title: 'Déplacée vers la collection',
+          title: 'Moved to collection',
           description: `${wantlistItem.quantity}x ${card.printedName || card.name}`,
         })
         onWantlistUpdate?.()
         onClose()
       }
     } catch {
-      toast({ title: 'Erreur', variant: 'destructive' })
+      toast({ title: 'Error', variant: 'destructive' })
     } finally {
       setIsWantlistUpdating(false)
     }
@@ -475,14 +552,14 @@ export function CardDetailModal({
       })
       if (response.ok) {
         toast({
-          title: 'Retirée de la wantlist',
+          title: 'Removed from wantlist',
           description: card?.printedName || card?.name,
         })
         onWantlistUpdate?.()
         onClose()
       }
     } catch {
-      toast({ title: 'Erreur', variant: 'destructive' })
+      toast({ title: 'Error', variant: 'destructive' })
     } finally {
       setIsWantlistUpdating(false)
     }
@@ -502,13 +579,13 @@ export function CardDetailModal({
       })
       if (response.ok) {
         toast({
-          title: 'Priorité mise à jour',
+          title: 'Priority updated',
           description: `${card?.printedName || card?.name} → ${newPriority}`,
         })
         onWantlistUpdate?.()
       }
     } catch {
-      toast({ title: 'Erreur', variant: 'destructive' })
+      toast({ title: 'Error', variant: 'destructive' })
     } finally {
       setIsWantlistUpdating(false)
     }
@@ -546,7 +623,7 @@ export function CardDetailModal({
                   ? "text-gold-400 hover:bg-gold-600/20 hover:border-gold-500 hover:scale-110 active:scale-95" 
                   : "text-dungeon-600 cursor-not-allowed opacity-50"
               )}
-              title="Carte précédente (←)"
+              title="Previous card (←)"
             >
               <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
             </button>
@@ -565,7 +642,7 @@ export function CardDetailModal({
                   ? "text-gold-400 hover:bg-gold-600/20 hover:border-gold-500 hover:scale-110 active:scale-95" 
                   : "text-dungeon-600 cursor-not-allowed opacity-50"
               )}
-              title="Carte suivante (→)"
+              title="Next card (→)"
             >
               <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7" />
             </button>
@@ -617,7 +694,7 @@ export function CardDetailModal({
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-dungeon-500">
-                  Pas d'image
+                  No image
                 </div>
               )}
               
@@ -633,7 +710,7 @@ export function CardDetailModal({
               {isDoubleFaced && backImage && (
                 <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-gold-600/90 backdrop-blur-sm text-white text-[10px] sm:text-xs font-medium flex items-center gap-1">
                   <RotateCw className="w-3 h-3" />
-                  {isFlipped ? 'Verso' : 'Recto'}
+                  {isFlipped ? 'Back' : 'Front'}
                 </div>
               )}
             </div>
@@ -649,7 +726,7 @@ export function CardDetailModal({
                   isFlipped && "rotate-180"
                 )} />
                 <span className="text-sm font-medium">
-                  {isFlipped ? 'Voir le recto' : 'Retourner la carte'}
+                  {isFlipped ? 'View front' : 'Flip card'}
                 </span>
               </button>
             )}
@@ -658,7 +735,7 @@ export function CardDetailModal({
             {baseVersions.length > 1 && (
               <div>
                 <h3 className="text-xs sm:text-sm font-semibold text-parchment-400 mb-1.5 sm:mb-2 flex items-center gap-2">
-                  Éditions
+                  Editions
                   <span className="text-[10px] sm:text-xs text-dungeon-400">({baseVersions.length})</span>
                   {loadingVersions && <Loader2 className="w-3 h-3 animate-spin" />}
                 </h3>
@@ -716,7 +793,7 @@ export function CardDetailModal({
                 <summary className="text-xs sm:text-sm font-semibold text-arcane-400 mb-1.5 sm:mb-2 flex items-center gap-2 cursor-pointer list-none">
                   <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
                   <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Arts Alternatifs
+                  Alternate Arts
                   <span className="text-[10px] sm:text-xs text-dungeon-400">({altArtVersions.length})</span>
                 </summary>
                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2 max-h-[120px] sm:max-h-[180px] overflow-y-auto pr-1 mt-1.5">
@@ -777,7 +854,7 @@ export function CardDetailModal({
             {loadingVersions && versions.length === 0 && (
               <div className="flex items-center justify-center py-3 sm:py-4 text-parchment-400 text-xs sm:text-sm">
                 <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" />
-                Chargement...
+                Loading...
               </div>
             )}
           </div>
@@ -796,14 +873,14 @@ export function CardDetailModal({
             {/* Card Text - Collapsible on mobile if long */}
             {(card.printedText || card.oracleText) && (
               <div>
-                <h3 className="text-xs sm:text-sm font-semibold text-parchment-400 mb-0.5 sm:mb-1">Texte</h3>
+                <h3 className="text-xs sm:text-sm font-semibold text-parchment-400 mb-0.5 sm:mb-1">Text</h3>
                 <p className="text-parchment-200 whitespace-pre-line text-xs sm:text-sm max-h-[120px] sm:max-h-none overflow-y-auto">
                   {card.printedText || card.oracleText}
                 </p>
                 {card.printedText && card.oracleText && card.printedText !== card.oracleText && (
                   <details className="mt-1.5 sm:mt-2">
                     <summary className="text-[10px] sm:text-xs text-parchment-500 cursor-pointer hover:text-parchment-400">
-                      Texte Oracle (EN)
+                      Oracle Text (EN)
                     </summary>
                     <p className="text-parchment-400 whitespace-pre-line text-[10px] sm:text-xs mt-1 pl-2 border-l border-dungeon-600">
                       {card.oracleText}
@@ -839,7 +916,7 @@ export function CardDetailModal({
               {/* Loyalty */}
               {card.loyalty && (
                 <div>
-                  <h3 className="text-[10px] sm:text-sm font-semibold text-parchment-400 mb-0.5 sm:mb-1">Loyauté</h3>
+                  <h3 className="text-[10px] sm:text-sm font-semibold text-parchment-400 mb-0.5 sm:mb-1">Loyalty</h3>
                   <p className="text-parchment-200 text-sm sm:text-base">{card.loyalty}</p>
                 </div>
               )}
@@ -852,7 +929,7 @@ export function CardDetailModal({
 
               {/* Rarity */}
               <div>
-                <h3 className="text-[10px] sm:text-sm font-semibold text-parchment-400 mb-0.5 sm:mb-1">Rareté</h3>
+                <h3 className="text-[10px] sm:text-sm font-semibold text-parchment-400 mb-0.5 sm:mb-1">Rarity</h3>
                 <p className={cn('capitalize text-sm sm:text-base', getRarityColor(displayRarity))}>
                   {displayRarity}
                 </p>
@@ -861,7 +938,7 @@ export function CardDetailModal({
 
             {/* Set Info - Updates based on selected version */}
             <div>
-              <h3 className="text-xs sm:text-sm font-semibold text-parchment-400 mb-0.5 sm:mb-1">Extension</h3>
+              <h3 className="text-xs sm:text-sm font-semibold text-parchment-400 mb-0.5 sm:mb-1">Set</h3>
               <p className="text-parchment-200 text-xs sm:text-base">
                 {displaySetName} <span className="text-parchment-400">({displaySetCode.toUpperCase()}) #{displayCollectorNumber}</span>
               </p>
@@ -886,6 +963,57 @@ export function CardDetailModal({
               onVersionSelect={handleVersionClick}
             />
 
+            {/* Deck Actions - Only shown for deck items */}
+            {deckCard && (
+              <div className="bg-arcane-900/20 border border-arcane-600/30 rounded-lg p-3 sm:p-4 space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Layers className="w-4 h-4 text-arcane-400" />
+                  <h3 className="text-sm font-semibold text-arcane-300">In Deck</h3>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-arcane-600/30 text-arcane-300 capitalize">
+                    {deckCard.category}
+                  </span>
+                </div>
+
+                {/* Quantity controls */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 bg-dungeon-800/50 rounded-lg p-1">
+                    <button
+                      onClick={() => handleDeckQuantityChange(currentDeckQuantity - 1)}
+                      disabled={isDeckUpdating}
+                      className="p-1.5 rounded hover:bg-dungeon-600 text-parchment-400 hover:text-parchment-200 transition-colors disabled:opacity-50"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="w-8 text-center text-parchment-200 font-medium text-sm">
+                      {currentDeckQuantity}
+                    </span>
+                    <button
+                      onClick={() => handleDeckQuantityChange(currentDeckQuantity + 1)}
+                      disabled={isDeckUpdating}
+                      className="p-1.5 rounded hover:bg-dungeon-600 text-parchment-400 hover:text-parchment-200 transition-colors disabled:opacity-50"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <Button
+                    onClick={handleRemoveFromDeck}
+                    disabled={isDeckUpdating}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs border-dragon-600/50 text-dragon-400 hover:bg-dragon-900/30"
+                  >
+                    {isDeckUpdating ? (
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    ) : (
+                      <Trash2 className="w-3 h-3 mr-1" />
+                    )}
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Wantlist Actions - Only shown for wantlist items */}
             {wantlistItem && (
               <div className="bg-pink-900/20 border border-pink-600/30 rounded-lg p-3 sm:p-4 space-y-3">
@@ -901,16 +1029,16 @@ export function CardDetailModal({
                 <div className="flex flex-wrap gap-2 text-xs">
                   {/* Priority selector */}
                   <div className="flex items-center gap-1 bg-dungeon-800/50 rounded px-2 py-1">
-                    <span className="text-parchment-400">Priorité:</span>
+                    <span className="text-parchment-400">Priority:</span>
                     <select
                       value={wantlistItem.priority}
                       onChange={(e) => handleChangePriority(e.target.value)}
                       disabled={isWantlistUpdating}
                       className="bg-transparent text-parchment-200 text-xs focus:outline-none cursor-pointer"
                     >
-                      <option value="high" className="bg-dungeon-800">Haute</option>
-                      <option value="medium" className="bg-dungeon-800">Moyenne</option>
-                      <option value="low" className="bg-dungeon-800">Basse</option>
+                      <option value="high" className="bg-dungeon-800">High</option>
+                      <option value="medium" className="bg-dungeon-800">Medium</option>
+                      <option value="low" className="bg-dungeon-800">Low</option>
                     </select>
                   </div>
 
@@ -918,7 +1046,7 @@ export function CardDetailModal({
                   {wantlistItem.isOrdered && (
                     <div className="flex items-center gap-1 bg-amber-900/30 text-amber-400 rounded px-2 py-1">
                       <ShoppingCart className="w-3 h-3" />
-                      <span>Commandée</span>
+                      <span>Ordered</span>
                       {wantlistItem.orderedAt && (
                         <span className="text-amber-400/60">
                           • {new Date(wantlistItem.orderedAt).toLocaleDateString('fr-FR')}
@@ -931,7 +1059,7 @@ export function CardDetailModal({
                   {wantlistItem.isReceived && (
                     <div className="flex items-center gap-1 bg-emerald-900/30 text-emerald-400 rounded px-2 py-1">
                       <PackageCheck className="w-3 h-3" />
-                      <span>Reçue</span>
+                      <span>Received</span>
                       {wantlistItem.receivedAt && (
                         <span className="text-emerald-400/60">
                           • {new Date(wantlistItem.receivedAt).toLocaleDateString('fr-FR')}
@@ -960,7 +1088,7 @@ export function CardDetailModal({
                     ) : (
                       <ShoppingCart className="w-3 h-3 mr-1" />
                     )}
-                    {wantlistItem.isOrdered ? 'Commandée' : 'Marquer commandée'}
+                    {wantlistItem.isOrdered ? 'Ordered' : 'Mark ordered'}
                   </Button>
 
                   <Button
@@ -980,7 +1108,7 @@ export function CardDetailModal({
                     ) : (
                       <PackageCheck className="w-3 h-3 mr-1" />
                     )}
-                    {wantlistItem.isReceived ? 'Reçue' : 'Marquer reçue'}
+                    {wantlistItem.isReceived ? 'Received' : 'Mark received'}
                   </Button>
 
                   <Button
@@ -995,7 +1123,7 @@ export function CardDetailModal({
                     ) : (
                       <ArrowRightCircle className="w-3 h-3 mr-1" />
                     )}
-                    Vers collection
+                    To collection
                   </Button>
 
                   <Button
@@ -1010,7 +1138,7 @@ export function CardDetailModal({
                     ) : (
                       <Trash2 className="w-3 h-3 mr-1" />
                     )}
-                    Retirer
+                    Remove
                   </Button>
                 </div>
 
@@ -1050,7 +1178,7 @@ export function CardDetailModal({
                           idx === 3 && "rounded-r-md",
                           idx > 0 && idx < 3 && "rounded-none"
                         )}
-                        title={`Ajouter x${qty} (touche ${qty})`}
+                        title={`Add x${qty} (key ${qty})`}
                       >
                         {isQuickAdding ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -1070,7 +1198,7 @@ export function CardDetailModal({
                     "h-8 sm:h-9 text-sm",
                     quickAddReady ? "flex-shrink-0" : "flex-1"
                   )}
-                  title="Choisir un deck"
+                  title="Choose a deck"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   {!quickAddReady && "Deck"}
@@ -1175,7 +1303,7 @@ function PriceSection({
     return (
       <div className="bg-dungeon-700/30 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-center">
         <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-dungeon-500 mx-auto mb-1" />
-        <p className="text-xs sm:text-sm text-parchment-500">Pas de prix</p>
+        <p className="text-xs sm:text-sm text-parchment-500">No price</p>
       </div>
     )
   }
@@ -1195,7 +1323,7 @@ function PriceSection({
     <div className="space-y-2 sm:space-y-3">
       <h3 className="text-xs sm:text-sm font-semibold text-parchment-400 flex items-center gap-2">
         <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        Prix
+        Price
         {selectedVersion && (
           <span className="text-[10px] sm:text-xs text-arcane-400 font-normal">
             • {selectedVersion.setCode.toUpperCase()}
@@ -1258,7 +1386,7 @@ function PriceSection({
               className="mt-1.5 sm:mt-2 w-full text-[10px] sm:text-xs text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-1 py-1 rounded bg-emerald-900/20 active:bg-emerald-900/30 transition-colors"
             >
               <TrendingDown className="w-3 h-3" />
-              Moins chère: {cheapestVersionEur.setCode.toUpperCase()}
+              Cheapest: {cheapestVersionEur.setCode.toUpperCase()}
             </button>
           )}
         </div>
@@ -1269,7 +1397,7 @@ function PriceSection({
         <details className="group">
           <summary className="text-[10px] sm:text-xs text-parchment-500 cursor-pointer hover:text-parchment-400 flex items-center gap-1">
             <span className="group-open:rotate-90 transition-transform">▶</span>
-            Prix par édition ({versionsWithPrices.length})
+            Price by edition ({versionsWithPrices.length})
           </summary>
           <div className="mt-1.5 sm:mt-2 max-h-[150px] sm:max-h-[200px] overflow-y-auto">
             <table className="w-full text-[10px] sm:text-xs">

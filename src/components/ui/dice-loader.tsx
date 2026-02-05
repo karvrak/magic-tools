@@ -12,7 +12,7 @@ interface DiceLoaderProps {
 const diceNumbers = [1, 4, 7, 11, 15, 18, 20]
 
 export function DiceLoader({ 
-  message = "Les augures consultent les étoiles...",
+  message = "The augurs are consulting the stars...",
   size = 'md',
   className 
 }: DiceLoaderProps) {

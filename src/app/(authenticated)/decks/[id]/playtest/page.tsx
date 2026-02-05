@@ -49,11 +49,11 @@ export default function PlaytestPage({ params }: { params: Promise<{ id: string 
   if (error || !data?.deck) {
     return (
       <div className="card-frame p-12 text-center">
-        <p className="text-dragon-400">Impossible de charger le deck</p>
+        <p className="text-dragon-400">Unable to load deck</p>
         <Link href="/decks">
           <Button variant="outline" className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour aux decks
+            Back to decks
           </Button>
         </Link>
       </div>
@@ -74,17 +74,17 @@ export default function PlaytestPage({ params }: { params: Promise<{ id: string 
           className="inline-flex items-center text-sm text-parchment-400 hover:text-parchment-200"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Retour au deck
+          Back to deck
         </Link>
 
         <div className="card-frame p-12 text-center">
           <Layers className="w-12 h-12 text-dungeon-600 mx-auto mb-4" />
           <p className="text-parchment-400">
-            Ce deck est vide. Ajoutez des cartes pour pouvoir le tester.
+            This deck is empty. Add cards to be able to test it.
           </p>
           <Link href={`/decks/${id}`}>
             <Button className="mt-4">
-              Retour au deck
+              Back to deck
             </Button>
           </Link>
         </div>
@@ -102,10 +102,10 @@ export default function PlaytestPage({ params }: { params: Promise<{ id: string 
             className="inline-flex items-center text-sm text-parchment-400 hover:text-parchment-200 mb-2"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Retour au deck
+            Back to deck
           </Link>
           <h1 className="font-medieval text-2xl text-gold-400">{deck.name}</h1>
-          <p className="text-sm text-parchment-500">Mode Goldfish • {mainDeckSize} cartes</p>
+          <p className="text-sm text-parchment-500">Goldfish Mode • {mainDeckSize} cards</p>
         </div>
       </div>
 

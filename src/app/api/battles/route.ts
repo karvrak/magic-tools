@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { GAME_MODES, type GameMode, type CreateBattleInput } from '@/types/battle'
 
-// GET /api/battles - Liste des batailles (historique)
+// GET /api/battles - List of battles (history)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -39,13 +39,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/battles - Créer une nouvelle bataille
+// POST /api/battles - Create a new battle
 export async function POST(request: NextRequest) {
   try {
     const body: CreateBattleInput = await request.json()
     const { mode, players } = body
 
-    // Validation du mode
+    // Mode validation
     const modeConfig = GAME_MODES[mode]
     if (!modeConfig) {
       return NextResponse.json(
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validation du nombre de joueurs
+    // Player count validation
     if (players.length !== modeConfig.players) {
       return NextResponse.json(
         { error: `Mode ${mode} requires exactly ${modeConfig.players} players` },
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validation des noms de deck
+    // Deck name validation
     for (const player of players) {
       if (!player.deckName || player.deckName.trim().length === 0) {
         return NextResponse.json(
@@ -72,14 +72,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Créer les decks "à la volée" si nécessaire
+    // Create decks "on the fly" if needed
     const playerData = await Promise.all(
       players.map(async (player, index) => {
         let deckId = player.deckId
 
-        // Si pas de deckId mais un nom, créer le deck
+        // If no deckId but a name, create the deck
         if (!deckId && player.deckName) {
-          // Vérifier si un deck avec ce nom existe déjà
+          // Check if a deck with this name already exists
           const existingDeck = await prisma.deck.findFirst({
             where: { name: player.deckName.trim() },
           })
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           if (existingDeck) {
             deckId = existingDeck.id
           } else {
-            // Créer un nouveau deck sans cartes
+            // Create a new deck without cards
             const newDeck = await prisma.deck.create({
               data: {
                 name: player.deckName.trim(),
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       })
     )
 
-    // Créer la bataille avec les joueurs
+    // Create the battle with the players
     const battle = await prisma.battle.create({
       data: {
         mode,

@@ -101,8 +101,8 @@ const RARITY_ORDER = ['mythic', 'rare', 'uncommon', 'common']
 const COLOR_ORDER = ['W', 'U', 'B', 'R', 'G', 'multicolor', 'colorless']
 
 const SORT_OPTIONS = [
-  { key: 'rarity', label: 'Rareté' },
-  { key: 'color', label: 'Couleur' },
+  { key: 'rarity', label: 'Rarity' },
+  { key: 'color', label: 'Color' },
   { key: 'cmc', label: 'CMC' },
   { key: 'type', label: 'Type' },
 ] as const
@@ -503,7 +503,7 @@ export default function SealedCollectionPage() {
                 }}
               >
                 <RotateCcw className="w-4 h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Nouveau</span>
+                <span className="hidden sm:inline">New</span>
               </Button>
             </div>
           )}
@@ -512,7 +512,7 @@ export default function SealedCollectionPage() {
         {/* Sort buttons - only when pool exists */}
         {generatedPool && !showBoosterAnimation && (
           <div className="flex items-center gap-1 mt-3 overflow-x-auto pb-1">
-            <span className="text-parchment-500 text-xs mr-1 flex-shrink-0">Trier:</span>
+            <span className="text-parchment-500 text-xs mr-1 flex-shrink-0">Sort:</span>
             {SORT_OPTIONS.map(({ key, label }) => (
               <button
                 key={key}
@@ -537,11 +537,11 @@ export default function SealedCollectionPage() {
           <div className="card-frame p-4 lg:p-6 max-w-lg mx-auto">
             <div className="flex items-center gap-2 mb-4">
               <BookOpen className="w-5 h-5 text-emerald-400" />
-              <h2 className="font-medieval text-lg text-emerald-400">Sealed avec ta collection</h2>
+              <h2 className="font-medieval text-lg text-emerald-400">Sealed with your collection</h2>
             </div>
 
             <p className="text-parchment-400 text-sm mb-4">
-              Ouvre des boosters avec les cartes de ta collection. Les cartes dans tes decks sont exclues.
+              Open boosters with cards from your collection. Cards in your decks are excluded.
             </p>
 
             {activeOwner && (
@@ -557,16 +557,16 @@ export default function SealedCollectionPage() {
             {setsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Sparkles className="w-6 h-6 text-emerald-400 animate-pulse" />
-                <span className="ml-2 text-parchment-400">Chargement...</span>
+                <span className="ml-2 text-parchment-400">Loading...</span>
               </div>
             ) : viableSets.length === 0 && nonViableSets.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="w-12 h-12 text-parchment-600 mx-auto mb-3" />
                 <p className="text-parchment-400 mb-4">
-                  Aucune carte dans ta collection.
+                  No cards in your collection.
                 </p>
                 <Link href="/collection" className="text-emerald-400 underline text-sm">
-                  Ajouter des cartes
+                  Add cards
                 </Link>
               </div>
             ) : (
@@ -576,21 +576,21 @@ export default function SealedCollectionPage() {
                   onChange={(e) => setSelectedSet(e.target.value)}
                   className="w-full bg-dungeon-800 border border-dungeon-600 rounded-lg px-3 py-3 text-parchment-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3"
                 >
-                  <option value="">-- Sélectionne un set --</option>
+                  <option value="">-- Select a set --</option>
                   {viableSets.length > 0 && (
-                    <optgroup label="Sets disponibles">
+                    <optgroup label="Available sets">
                       {viableSets.map((set) => (
                         <option key={set.setCode} value={set.setCode}>
-                          {set.setName} ({set.totalCards} cartes)
+                          {set.setName} ({set.totalCards} cards)
                         </option>
                       ))}
                     </optgroup>
                   )}
                   {nonViableSets.length > 0 && (
-                    <optgroup label="Sets incomplets">
+                    <optgroup label="Incomplete sets">
                       {nonViableSets.map((set) => (
                         <option key={set.setCode} value={set.setCode}>
-                          {set.setName} ({set.totalCards} cartes)
+                          {set.setName} ({set.totalCards} cards)
                         </option>
                       ))}
                     </optgroup>
@@ -604,11 +604,11 @@ export default function SealedCollectionPage() {
                       <span className="text-parchment-300 font-medium">{selectedSetInfo.setName}</span>
                       {selectedSetInfo.isViable ? (
                         <span className="flex items-center gap-1 text-emerald-400 text-xs">
-                          <Check className="w-3 h-3" /> Prêt
+                          <Check className="w-3 h-3" /> Ready
                         </span>
                       ) : (
                         <span className="flex items-center gap-1 text-amber-400 text-xs">
-                          <AlertTriangle className="w-3 h-3" /> Incomplet
+                          <AlertTriangle className="w-3 h-3" /> Incomplete
                         </span>
                       )}
                     </div>
@@ -636,7 +636,7 @@ export default function SealedCollectionPage() {
                     </div>
                     {!selectedSetInfo.isViable && (
                       <p className="text-amber-400 text-xs mt-2">
-                        Pas assez de cartes pour un sealed complet. Les boosters seront partiellement remplis.
+                        Not enough cards for a complete sealed. Boosters will be partially filled.
                       </p>
                     )}
                   </div>
@@ -650,12 +650,12 @@ export default function SealedCollectionPage() {
                   {generateMutation.isPending ? (
                     <>
                       <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-                      Ouverture...
+                      Opening...
                     </>
                   ) : (
                     <>
                       <Package className="w-5 h-5 mr-2" />
-                      Ouvrir 6 Boosters
+                      Open 6 Boosters
                     </>
                   )}
                 </Button>
@@ -672,7 +672,7 @@ export default function SealedCollectionPage() {
                     className="flex items-center justify-center gap-2 text-parchment-400 text-sm hover:text-parchment-200"
                   >
                     <Package className="w-4 h-4" />
-                    Simulateur de sealed (toutes cartes)
+                    Sealed simulator (all cards)
                   </Link>
                 </div>
               </>
@@ -749,7 +749,7 @@ export default function SealedCollectionPage() {
                   className="flex-1"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />
-                  Préc.
+                  Prev.
                 </Button>
 
                 {currentBoosterIndex < 5 ? (
@@ -757,7 +757,7 @@ export default function SealedCollectionPage() {
                     onClick={() => setCurrentBoosterIndex(prev => prev + 1)}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
-                    Suiv.
+                    Next
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 ) : (
@@ -766,7 +766,7 @@ export default function SealedCollectionPage() {
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
                     <Layers className="w-4 h-4 mr-1" />
-                    Construire
+                    Build
                   </Button>
                 )}
               </div>
@@ -775,7 +775,7 @@ export default function SealedCollectionPage() {
                 onClick={() => setShowBoosterAnimation(false)}
                 className="block mx-auto mt-3 text-parchment-500 text-sm underline"
               >
-                Passer
+                Skip
               </button>
             </div>
           </div>
@@ -788,7 +788,7 @@ export default function SealedCollectionPage() {
             <div>
               {/* Stats bar */}
               <div className="flex items-center gap-3 text-xs text-parchment-400 mb-3 flex-wrap">
-                <span>{generatedPool.pool.length} cartes</span>
+                <span>{generatedPool.pool.length} cards</span>
                 <span className="text-orange-400">{generatedPool.stats.mythics}M</span>
                 <span className="text-yellow-400">{generatedPool.stats.rares}R</span>
                 <span className="text-gray-300">{generatedPool.stats.uncommons}U</span>
@@ -886,7 +886,7 @@ export default function SealedCollectionPage() {
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               <ChevronUp className="w-5 h-5 mr-2" />
-              Retour au pool
+              Back to pool
             </Button>
           </div>
         </div>
@@ -939,9 +939,9 @@ function DeckPanel({
           : "bg-yellow-900/30 text-yellow-400"
       )}>
         {deckSize >= 40 ? (
-          <>Deck valide ({deckSize} cartes)</>
+          <>Valid deck ({deckSize} cards)</>
         ) : (
-          <>Il manque {40 - deckSize} cartes</>
+          <>{40 - deckSize} cards missing</>
         )}
       </div>
 
@@ -949,15 +949,15 @@ function DeckPanel({
       <div className="grid grid-cols-3 gap-2 text-sm">
         <div className="bg-dungeon-700 rounded p-2 text-center">
           <div className="text-emerald-400 font-bold">{deckStats.lands}</div>
-          <div className="text-parchment-500 text-xs">Terrains</div>
+          <div className="text-parchment-500 text-xs">Lands</div>
         </div>
         <div className="bg-dungeon-700 rounded p-2 text-center">
           <div className="text-emerald-400 font-bold">{deckStats.nonLands}</div>
-          <div className="text-parchment-500 text-xs">Sorts</div>
+          <div className="text-parchment-500 text-xs">Spells</div>
         </div>
         <div className="bg-dungeon-700 rounded p-2 text-center">
           <div className="text-emerald-400 font-bold">{deckStats.avgCMC.toFixed(1)}</div>
-          <div className="text-parchment-500 text-xs">CMC moy.</div>
+          <div className="text-parchment-500 text-xs">Avg CMC</div>
         </div>
       </div>
 
@@ -993,7 +993,7 @@ function DeckPanel({
       )}>
         {deckCards.length === 0 ? (
           <p className="text-parchment-500 text-center py-6 text-sm">
-            Ajoute des cartes depuis le pool
+            Add cards from the pool
           </p>
         ) : (
           <div className="overflow-y-auto max-h-full divide-y divide-dungeon-700">
@@ -1038,7 +1038,7 @@ function DeckPanel({
           className="flex-1"
         >
           <RotateCcw className="w-4 h-4 mr-1" />
-          Vider
+          Clear
         </Button>
         <Button
           variant="outline"
@@ -1056,7 +1056,7 @@ function DeckPanel({
       {deckSize >= 40 && (
         <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" disabled>
           <Play className="w-4 h-4 mr-2" />
-          Tester (bientôt)
+          Test (coming soon)
         </Button>
       )}
     </div>

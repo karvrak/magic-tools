@@ -197,8 +197,8 @@ export default function CollectionPage() {
     },
     onError: () => {
       toast({
-        title: 'Erreur',
-        description: "La modification a échoué.",
+        title: 'Error',
+        description: "Update failed.",
         variant: 'destructive',
       })
       setUpdatingItemId(null)
@@ -222,8 +222,8 @@ export default function CollectionPage() {
     },
     onError: () => {
       toast({
-        title: 'Erreur',
-        description: "La modification a échoué.",
+        title: 'Error',
+        description: "Update failed.",
         variant: 'destructive',
       })
       setUpdatingItemId(null)
@@ -295,7 +295,7 @@ export default function CollectionPage() {
               )}
             </div>
             <p className="text-parchment-500 text-sm">
-              Vos cartes et wishlist en un seul endroit
+              Your cards and wishlist in one place
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -310,7 +310,7 @@ export default function CollectionPage() {
                     <div>
                       <p className="text-xs text-emerald-400 flex items-center gap-1">
                         <Archive className="w-3 h-3" />
-                        {data.owned.cards} possédées
+                        {data.owned.cards} owned
                       </p>
                       <p className="text-sm font-semibold text-gold-400 flex items-center gap-1">
                         <Coins className="w-3.5 h-3.5" />
@@ -322,7 +322,7 @@ export default function CollectionPage() {
                     <div>
                       <p className="text-xs text-pink-400 flex items-center gap-1">
                         <Heart className="w-3 h-3" />
-                        {data.wanted.cards} souhaitées
+                        {data.wanted.cards} wanted
                       </p>
                       <p className="text-sm font-semibold text-pink-300 flex items-center gap-1">
                         <Coins className="w-3.5 h-3.5" />
@@ -336,7 +336,7 @@ export default function CollectionPage() {
             <Link href="/">
               <Button>
                 <Search className="w-4 h-4 mr-2" />
-                Rechercher
+                Search
               </Button>
             </Link>
           </div>
@@ -368,7 +368,7 @@ export default function CollectionPage() {
                 )}
               >
                 <Archive className="w-4 h-4" />
-                <span className="hidden sm:inline">Tout</span>
+                <span className="hidden sm:inline">All</span>
                 <span className="text-xs opacity-70">({data.total})</span>
               </button>
               <button
@@ -381,7 +381,7 @@ export default function CollectionPage() {
                 )}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Possédées</span>
+                <span className="hidden sm:inline">Owned</span>
                 <span className="text-xs opacity-70">({data.owned.count})</span>
               </button>
               <button
@@ -394,7 +394,7 @@ export default function CollectionPage() {
                 )}
               >
                 <Heart className="w-4 h-4" />
-                <span className="hidden sm:inline">Souhaitées</span>
+                <span className="hidden sm:inline">Wanted</span>
                 <span className="text-xs opacity-70">({data.wanted.count})</span>
               </button>
             </>
@@ -408,7 +408,7 @@ export default function CollectionPage() {
             className="h-9 gap-2 hidden sm:flex"
           >
             <Upload className="w-4 h-4" />
-            Importer decks
+            Import decks
           </Button>
         </div>
       </FadeIn>
@@ -429,9 +429,9 @@ export default function CollectionPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-parchment-400">
               {isFetching && !isLoading ? (
-                <span className="animate-pulse">Chargement...</span>
+                <span className="animate-pulse">Loading...</span>
               ) : (
-                <><span className="text-gold-400 font-semibold">{data.total}</span> cartes</>
+                <><span className="text-gold-400 font-semibold">{data.total}</span> cards</>
               )}
             </p>
 
@@ -466,7 +466,7 @@ export default function CollectionPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <DiceLoader message="Chargement de votre collection..." />
+        <DiceLoader message="Loading your collection..." />
       )}
 
       {/* Empty State */}
@@ -474,7 +474,7 @@ export default function CollectionPage() {
         <EmptyState
           variant="collection"
           action={{
-            label: 'Ajouter des cartes',
+            label: 'Add cards',
             onClick: () => window.location.href = '/',
           }}
         />
@@ -517,7 +517,7 @@ export default function CollectionPage() {
               className="h-10 px-4"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
-              Précédent
+              Previous
             </Button>
             <span className="text-sm text-parchment-300 font-medieval min-w-[80px] text-center">
               {page} / {totalPages}
@@ -528,7 +528,7 @@ export default function CollectionPage() {
               disabled={page === totalPages}
               className="h-10 px-4"
             >
-              Suivant
+              Next
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>

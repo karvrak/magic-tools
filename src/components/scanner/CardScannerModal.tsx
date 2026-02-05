@@ -111,12 +111,12 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
       if (isProcessing) return
 
       setIsProcessing(true)
-      setScanStatus('Analyse Grok...')
+      setScanStatus('Grok analysis...')
 
       try {
         const imageData = captureFrame()
         if (!imageData) {
-          setScanStatus('Erreur capture')
+          setScanStatus('Capture error')
           setIsProcessing(false)
           return
         }
@@ -129,7 +129,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
         })
 
         if (!ocrResponse.ok) {
-          setScanStatus('Erreur API')
+          setScanStatus('API error')
           setIsProcessing(false)
           return
         }
@@ -138,20 +138,20 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
         const extractedText = ocrData.cardName
 
         if (!extractedText || extractedText.length < 3) {
-          setScanStatus('Aucune carte détectée')
+          setScanStatus('No card detected')
           setIsProcessing(false)
           return
         }
 
         // Skip if same text as last scan
         if (extractedText === lastScannedText) {
-          setScanStatus('En attente nouvelle carte...')
+          setScanStatus('Waiting for new card...')
           setIsProcessing(false)
           return
         }
 
         setLastScannedText(extractedText)
-        setScanStatus(`Recherche: ${extractedText}...`)
+        setScanStatus(`Searching: ${extractedText}...`)
 
         // Match to database
         const response = await fetch('/api/scanner/match', {
@@ -161,7 +161,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
         })
 
         if (!response.ok) {
-          setScanStatus('Erreur recherche')
+          setScanStatus('Search error')
           setIsProcessing(false)
           return
         }
@@ -170,7 +170,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
         const matches: CardMatch[] = data.matches[0]?.results || []
 
         if (matches.length === 0 || matches[0].score < 0.6) {
-          setScanStatus(`"${extractedText}" - Non trouvé`)
+          setScanStatus(`"${extractedText}" - Not found`)
           setIsProcessing(false)
           return
         }
@@ -179,7 +179,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
 
         // Skip if same card as last added
         if (bestMatch.card.id === lastAddedCardRef.current) {
-          setScanStatus('En attente nouvelle carte...')
+          setScanStatus('Waiting for new card...')
           setIsProcessing(false)
           return
         }
@@ -218,7 +218,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
 
       } catch (err) {
         console.error('Auto-scan error:', err)
-        setScanStatus('Erreur')
+        setScanStatus('Error')
       } finally {
         setIsProcessing(false)
       }
@@ -305,7 +305,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
     setSearchQuery('')
     setSearchResults([])
     toast({
-      title: 'Carte ajoutée',
+      title: 'Card added',
       description: card.printedName || card.name,
     })
   }, [scannedCards, toast])
@@ -338,8 +338,8 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
   const handleAddToCollection = useCallback(async () => {
     if (scannedCards.length === 0) {
       toast({
-        title: 'Aucune carte',
-        description: 'Ajoutez des cartes avant de valider.',
+        title: 'No cards',
+        description: 'Add cards before validating.',
         variant: 'destructive',
       })
       return
@@ -369,16 +369,16 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
       const result = await response.json()
 
       toast({
-        title: 'Cartes ajoutées',
-        description: `${result.added} nouvelles, ${result.updated} mises à jour`,
+        title: 'Cards added',
+        description: `${result.added} new, ${result.updated} updated`,
       })
 
       onSuccess?.()
       onClose()
     } catch (error) {
       toast({
-        title: 'Erreur',
-        description: 'Impossible d\'ajouter les cartes',
+        title: 'Error',
+        description: 'Failed to add cards',
         variant: 'destructive',
       })
       setMode('reviewing')
@@ -406,8 +406,8 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
         <DialogHeader className="p-4 pb-2 border-b border-dungeon-700">
           <DialogTitle className="flex items-center gap-2">
             <ScanLine className="w-5 h-5 text-arcane-400" />
-            {mode === 'scanning' ? 'Scanner des cartes' :
-             mode === 'reviewing' ? 'Vérifier les cartes' : 'Ajout en cours...'}
+            {mode === 'scanning' ? 'Scan cards' :
+             mode === 'reviewing' ? 'Verify cards' : 'Adding...'}
           </DialogTitle>
         </DialogHeader>
 
@@ -434,10 +434,10 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   )}
                   <span className="text-sm text-parchment-300 flex-1 truncate">
-                    {!cameraReady ? 'Démarrage caméra...' : scanStatus || 'Scan actif...'}
+                    {!cameraReady ? 'Starting camera...' : scanStatus || 'Scanning...'}
                   </span>
                   <span className="text-gold-400 font-medium text-sm">
-                    {scannedCards.length} carte{scannedCards.length !== 1 ? 's' : ''}
+                    {scannedCards.length} card{scannedCards.length !== 1 ? 's' : ''}
                   </span>
                 </div>
               </div>
@@ -449,7 +449,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
                   className="w-full h-14 text-lg bg-dragon-600 hover:bg-dragon-500 text-white"
                 >
                   <Square className="w-5 h-5 mr-2 fill-current" />
-                  Arrêter le scan
+                  Stop scanning
                   {scannedCards.length > 0 && ` (${scannedCards.length})`}
                 </Button>
               </div>
@@ -465,7 +465,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-parchment-500" />
                   <Input
                     type="text"
-                    placeholder="Ajouter une carte..."
+                    placeholder="Add a card..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     className="pl-10 h-10 bg-dungeon-800 border-dungeon-600"
@@ -526,8 +526,8 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {scannedCards.length === 0 ? (
                   <div className="text-center py-8 text-parchment-500">
-                    <p>Aucune carte scannée</p>
-                    <p className="text-sm mt-1">Utilisez la recherche pour ajouter des cartes</p>
+                    <p>No cards scanned</p>
+                    <p className="text-sm mt-1">Use search to add cards</p>
                   </div>
                 ) : (
                   scannedCards.map(card => (
@@ -590,7 +590,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
                   <div className="p-3 bg-dungeon-800/50 flex justify-between text-sm">
                     <span className="text-parchment-400">Total:</span>
                     <span className="text-gold-400 font-medium">
-                      {scannedCards.length} carte{scannedCards.length !== 1 ? 's' : ''} ({totalQuantity} exemplaire{totalQuantity !== 1 ? 's' : ''})
+                      {scannedCards.length} card{scannedCards.length !== 1 ? 's' : ''} ({totalQuantity} cop{totalQuantity !== 1 ? 'ies' : 'y'})
                     </span>
                   </div>
                 )}
@@ -602,7 +602,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
                     className="w-full h-12 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
                   >
                     <Check className="w-5 h-5 mr-2" />
-                    Valider et ajouter à la collection
+                    Validate and add to collection
                   </Button>
 
                   <Button
@@ -611,7 +611,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
                     className="w-full"
                   >
                     <Camera className="w-4 h-4 mr-2" />
-                    Scanner plus de cartes
+                    Scan more cards
                   </Button>
                 </div>
               </div>
@@ -623,7 +623,7 @@ export function CardScannerModal({ open, onClose, onSuccess }: CardScannerModalP
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="text-center">
                 <Loader2 className="w-12 h-12 animate-spin text-arcane-400 mx-auto mb-4" />
-                <p className="text-parchment-300">Ajout des cartes en cours...</p>
+                <p className="text-parchment-300">Adding cards...</p>
               </div>
             </div>
           )}

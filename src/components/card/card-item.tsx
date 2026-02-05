@@ -126,7 +126,7 @@ export function CardItem({ card, onClick, index = 0 }: CardItemProps) {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            title={card.isReferencePrice ? "Prix indicatif (autre édition)" : "Prix de cette édition"}
+            title={card.isReferencePrice ? "Reference price (other edition)" : "Price for this edition"}
           >
             {card.isReferencePrice && (
               <TrendingUp className="w-3 h-3 text-parchment-500" />
@@ -149,7 +149,7 @@ export function CardItem({ card, onClick, index = 0 }: CardItemProps) {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15 }}
-              title={`${card.versionCount} versions disponibles`}
+              title={`${card.versionCount} versions available`}
             >
               <Layers className="w-3 h-3 text-arcane-400" />
               <span className="text-[10px] font-semibold text-arcane-300">
@@ -165,7 +165,7 @@ export function CardItem({ card, onClick, index = 0 }: CardItemProps) {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              title="Carte double-face"
+              title="Double-faced card"
             >
               <RotateCw className="w-3 h-3 text-gold-400" />
             </motion.div>
@@ -197,7 +197,7 @@ export function CardItem({ card, onClick, index = 0 }: CardItemProps) {
                   "transition-colors duration-150",
                   isAdding && "cursor-wait"
                 )}
-                title={activeDeck ? `Ajouter à ${activeDeck.name}` : 'Quick Add'}
+                title={activeDeck ? `Add to ${activeDeck.name}` : 'Quick Add'}
               >
                 {isAdding ? (
                   <Loader2 className="w-4 h-4 text-white animate-spin" />
@@ -229,7 +229,7 @@ export function CardItem({ card, onClick, index = 0 }: CardItemProps) {
                           "transition-all duration-100",
                           "text-xs font-bold text-arcane-300 hover:text-white"
                         )}
-                        title={`Ajouter x${qty}`}
+                        title={`Add x${qty}`}
                       >
                         x{qty}
                       </button>

@@ -63,8 +63,8 @@ const keyboardShortcuts: ShortcutCategory[] = [
   {
     category: 'Card Modal',
     shortcuts: [
-      { key: 'A', description: 'Quick Add: ajouter x1 au deck actif', icon: Sparkles },
-      { key: '1-4', description: 'Quick Add: ajouter x1, x2, x3 ou x4', icon: Sparkles },
+      { key: 'A', description: 'Quick Add: add x1 to active deck', icon: Sparkles },
+      { key: '1-4', description: 'Quick Add: add x1, x2, x3 or x4', icon: Sparkles },
       { key: '←', description: 'Previous card in results', icon: MousePointer },
       { key: '→', description: 'Next card in results', icon: MousePointer },
     ]
@@ -75,74 +75,74 @@ const keyboardShortcuts: ShortcutCategory[] = [
 const simulationStats = {
   basic: [
     {
-      name: 'Terrains en main',
+      name: 'Lands in hand',
       icon: Mountain,
-      description: 'Nombre moyen de terrains dans votre main de départ (7 cartes).',
+      description: 'Average number of lands in your opening hand (7 cards).',
       ideal: '2.5 - 3.0',
-      tips: 'Un deck de 60 cartes avec 24 terrains aura en moyenne ~2.8 terrains par main.'
+      tips: 'A 60-card deck with 24 lands will have on average ~2.8 lands per hand.'
     },
     {
-      name: 'Sorts en main',
+      name: 'Spells in hand',
       icon: Sparkles,
-      description: 'Nombre moyen de non-terrains dans votre main, avec le coût de mana converti (CMC) moyen de ces sorts.',
-      ideal: '4 - 5 sorts',
-      tips: 'Un CMC moyen bas (< 2.5) indique un deck agressif, plus élevé (> 3.5) un deck contrôle.'
+      description: 'Average number of non-lands in your hand, with the average converted mana cost (CMC) of these spells.',
+      ideal: '4 - 5 spells',
+      tips: 'A low average CMC (< 2.5) indicates an aggressive deck, higher (> 3.5) a control deck.'
     },
     {
-      name: 'Mains gardables',
+      name: 'Keepable hands',
       icon: Target,
-      description: 'Pourcentage de mains contenant entre 2 et 4 terrains, considérées comme "gardables" sans mulligan.',
+      description: 'Percentage of hands containing between 2 and 4 lands, considered "keepable" without mulligan.',
       ideal: '> 80%',
-      tips: 'Si ce pourcentage est bas, ajustez votre ratio de terrains. Un deck avec trop peu de terrains aura beaucoup de mains "mana screw".'
+      tips: 'If this percentage is low, adjust your land ratio. A deck with too few lands will have many "mana screw" hands.'
     },
     {
-      name: 'Jouable T1 / T2',
+      name: 'Playable T1 / T2',
       icon: TrendingUp,
-      description: 'Pourcentage de mains où vous avez au moins une carte jouable au tour 1 ou 2. Indique la consistance de vos premiers tours.',
+      description: 'Percentage of hands where you have at least one playable card on turn 1 or 2. Indicates the consistency of your early turns.',
       ideal: 'T1 > 60%, T2 > 85%',
-      tips: 'Pour un deck aggro, visez T1 > 80%. Pour un deck contrôle, T2 > 90% est suffisant.'
+      tips: 'For an aggro deck, aim for T1 > 80%. For a control deck, T2 > 90% is sufficient.'
     },
     {
       name: 'Mana Screw',
       icon: TrendingDown,
-      description: 'Pourcentage de mains avec 0-1 terrain. Ces mains sont presque toujours des mulligans obligatoires.',
+      description: 'Percentage of hands with 0-1 land. These hands are almost always mandatory mulligans.',
       ideal: '< 12%',
-      tips: 'Un % élevé signifie que vous manquez de terrains. Considérez ajouter 1-2 terrains ou des MDFCs.'
+      tips: 'A high % means you lack lands. Consider adding 1-2 lands or MDFCs.'
     },
     {
       name: 'Mana Flood',
       icon: Mountain,
-      description: 'Pourcentage de mains avec 5+ terrains. Ces mains manquent de menaces ou de réponses.',
+      description: 'Percentage of hands with 5+ lands. These hands lack threats or answers.',
       ideal: '< 10%',
-      tips: 'Un % élevé signifie trop de terrains. Réduisez de 1-2 ou ajoutez des effets de draw.'
+      tips: 'A high % means too many lands. Reduce by 1-2 or add draw effects.'
     },
   ],
   advanced: [
     {
-      name: 'Mana réellement disponible',
+      name: 'Actually available mana',
       icon: Layers,
-      description: 'Prend en compte les terrains qui arrivent engagés (tapped). Par exemple, un deck avec 4 Temples aura moins de mana T1 qu\'un deck full shocklands.',
-      tips: 'Un écart important entre "terrains en main" et "mana disponible" indique trop de taplands.'
+      description: 'Takes into account lands that enter tapped. For example, a deck with 4 Temples will have less mana T1 than a full shocklands deck.',
+      tips: 'A significant gap between "lands in hand" and "available mana" indicates too many taplands.'
     },
     {
       name: 'Color Fixing',
       icon: Palette,
-      description: 'Compare vos sources de mana coloré aux besoins de vos sorts. Le ratio idéal dépend de votre courbe de mana.',
-      ideal: '> 40% par couleur',
-      tips: 'Rouge: sources de {R} disponibles vs symboles {R} dans vos sorts. Si < 30%, vous aurez souvent des problèmes de couleurs.'
+      description: 'Compares your colored mana sources to your spells requirements. The ideal ratio depends on your mana curve.',
+      ideal: '> 40% per color',
+      tips: 'Red: available {R} sources vs {R} symbols in your spells. If < 30%, you will often have color problems.'
     },
     {
-      name: '% bonnes couleurs T1/T2/T3',
+      name: '% right colors T1/T2/T3',
       icon: Target,
-      description: 'Pourcentage de mains où vous pouvez effectivement jouer vos sorts grâce à la bonne combinaison de couleurs.',
+      description: 'Percentage of hands where you can effectively cast your spells thanks to the right color combination.',
       ideal: 'T2 > 90%, T3 > 95%',
-      tips: 'Un % faible T1 est normal pour un deck multicolore. Surveillez plutôt T2 et T3.'
+      tips: 'A low % T1 is normal for a multicolor deck. Focus on T2 and T3 instead.'
     },
     {
-      name: 'Répartition des terrains',
+      name: 'Land distribution',
       icon: Mountain,
-      description: 'Catégorise vos terrains : Basic, Fetch, Shock, Check, Fast, Tapland, MDFC, Bounce.',
-      tips: 'Les Fetchlands comptent pour 0 mana le tour où ils sont joués mais permettent le color fixing.'
+      description: 'Categorizes your lands: Basic, Fetch, Shock, Check, Fast, Tapland, MDFC, Bounce.',
+      tips: 'Fetchlands count as 0 mana the turn they are played but provide color fixing.'
     },
   ]
 }
@@ -152,14 +152,14 @@ const documentationSections = [
   {
     title: 'Quick Add ⚡',
     icon: Sparkles,
-    description: 'Ajoutez des cartes à vos decks en un instant.',
+    description: 'Add cards to your decks instantly.',
     features: [
-      'Survolez une carte → cliquez sur + (x1) ou survolez pour x2/x3/x4',
-      'Dans le modal carte : boutons x1, x2, x3, x4 ou touches clavier',
-      'Raccourcis : A = x1, ou directement 1, 2, 3, 4',
-      'Le deck actif est visible dans le header (icône ⚡)',
-      'Les decks "En construction" sont prioritaires',
-      'Changez de deck actif via le menu dans le header',
+      'Hover a card → click on + (x1) or hover for x2/x3/x4',
+      'In the card modal: x1, x2, x3, x4 buttons or keyboard shortcuts',
+      'Shortcuts: A = x1, or directly 1, 2, 3, 4',
+      'The active deck is visible in the header (⚡ icon)',
+      '"Under construction" decks are prioritized',
+      'Change active deck via the menu in the header',
     ]
   },
   {
@@ -225,8 +225,8 @@ export default function HelpPage() {
     setMigrationResult(null)
 
     toast({
-      title: 'Migration en cours...',
-      description: 'Import des cartes de vos decks vers la collection.',
+      title: 'Migration in progress...',
+      description: 'Importing cards from your decks to the collection.',
       variant: 'info',
     })
 
@@ -241,21 +241,21 @@ export default function HelpPage() {
           totalCards: data.collectionStats?.reduce((sum: number, s: { totalCards: number }) => sum + s.totalCards, 0) || 0,
         })
         toast({
-          title: 'Migration terminée!',
-          description: `${data.created} nouvelles entrées, ${data.updated} mises à jour.`,
+          title: 'Migration complete!',
+          description: `${data.created} new entries, ${data.updated} updated.`,
           variant: 'success',
         })
       } else {
         toast({
-          title: 'Migration échouée',
-          description: data.error || 'Une erreur est survenue.',
+          title: 'Migration failed',
+          description: data.error || 'An error occurred.',
           variant: 'destructive',
         })
       }
     } catch {
       toast({
-        title: 'Erreur',
-        description: 'Erreur réseau. Veuillez réessayer.',
+        title: 'Error',
+        description: 'Network error. Please try again.',
         variant: 'destructive',
       })
     } finally {
@@ -445,9 +445,9 @@ export default function HelpPage() {
               <div className="flex-1">
                 <h3 className="font-medium text-parchment-200">Import Decks → Collection</h3>
                 <p className="text-xs text-parchment-500 mt-1">
-                  Importe toutes les cartes de vos decks existants dans votre collection.
-                  Les cartes sont ajoutées en condition Near Mint (NM), non-foil.
-                  Si une carte existe déjà, la quantité est additionnée.
+                  Imports all cards from your existing decks into your collection.
+                  Cards are added in Near Mint (NM) condition, non-foil.
+                  If a card already exists, the quantity is added.
                 </p>
               </div>
             </div>
@@ -459,26 +459,26 @@ export default function HelpPage() {
               {migrating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Migration en cours...
+                  Migration in progress...
                 </>
               ) : (
                 <>
                   <Archive className="w-4 h-4 mr-2" />
-                  Importer les decks dans la collection
+                  Import decks into collection
                 </>
               )}
             </Button>
             {migrationResult && (
               <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm">
-                <p className="text-green-400 font-medium">Migration réussie!</p>
+                <p className="text-green-400 font-medium">Migration successful!</p>
                 <p className="text-parchment-400 text-xs mt-1">
-                  {migrationResult.created} nouvelles entrées créées, {migrationResult.updated} mises à jour.
-                  Total: {migrationResult.totalCards} cartes dans la collection.
+                  {migrationResult.created} new entries created, {migrationResult.updated} updated.
+                  Total: {migrationResult.totalCards} cards in collection.
                 </p>
               </div>
             )}
             <p className="text-[10px] text-dungeon-500 mt-2 text-center italic">
-              Exécuter une seule fois pour initialiser la collection
+              Run once to initialize the collection
             </p>
           </div>
         </section>
@@ -583,8 +583,8 @@ export default function HelpPage() {
               <FlaskConical className="w-5 h-5 text-arcane-400" />
             </div>
             <div>
-              <h2 className="font-medieval text-xl text-gold-400">Test Automatique (Simulation)</h2>
-              <p className="text-sm text-parchment-500">Comprendre les statistiques de votre deck</p>
+              <h2 className="font-medieval text-xl text-gold-400">Automatic Testing (Simulation)</h2>
+              <p className="text-sm text-parchment-500">Understanding your deck statistics</p>
             </div>
           </div>
 
@@ -592,17 +592,17 @@ export default function HelpPage() {
             {/* Intro */}
             <div className="p-4 rounded-lg bg-dungeon-800/30 border border-arcane-500/20">
               <p className="text-sm text-parchment-300">
-                Le test automatique simule <span className="text-gold-400 font-medium">10 000 tirages</span> de votre deck 
-                pour analyser sa consistance sur les 3 premiers tours. Il calcule la probabilité de bonnes mains de départ,
-                le risque de mana screw/flood, et la disponibilité de vos couleurs.
+                The automatic test simulates <span className="text-gold-400 font-medium">10,000 draws</span> from your deck
+                to analyze its consistency over the first 3 turns. It calculates the probability of good opening hands,
+                the risk of mana screw/flood, and the availability of your colors.
               </p>
             </div>
 
             {/* Basic Stats */}
             <div>
               <h3 className="text-sm font-semibold text-parchment-400 mb-3 uppercase tracking-wider flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-dungeon-700 text-xs text-parchment-300">Base</span>
-                Statistiques de base
+                <span className="px-2 py-0.5 rounded bg-dungeon-700 text-xs text-parchment-300">Basic</span>
+                Basic statistics
               </h3>
               <div className="grid gap-3">
                 {simulationStats.basic.map((stat) => (
@@ -620,7 +620,7 @@ export default function HelpPage() {
                           <h4 className="font-medium text-parchment-200">{stat.name}</h4>
                           {stat.ideal && (
                             <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400 whitespace-nowrap">
-                              Idéal: {stat.ideal}
+                              Ideal: {stat.ideal}
                             </span>
                           )}
                         </div>
@@ -636,8 +636,8 @@ export default function HelpPage() {
             {/* Advanced Stats */}
             <div>
               <h3 className="text-sm font-semibold text-parchment-400 mb-3 uppercase tracking-wider flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-arcane-500/30 text-xs text-arcane-400">Avancé</span>
-                Statistiques avancées
+                <span className="px-2 py-0.5 rounded bg-arcane-500/30 text-xs text-arcane-400">Advanced</span>
+                Advanced statistics
               </h3>
               <div className="grid gap-3">
                 {simulationStats.advanced.map((stat) => (
@@ -655,7 +655,7 @@ export default function HelpPage() {
                           <h4 className="font-medium text-parchment-200">{stat.name}</h4>
                           {stat.ideal && (
                             <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400 whitespace-nowrap">
-                              Idéal: {stat.ideal}
+                              Ideal: {stat.ideal}
                             </span>
                           )}
                         </div>
@@ -670,45 +670,45 @@ export default function HelpPage() {
 
             {/* Distribution Chart Legend */}
             <div className="p-4 rounded-lg bg-dungeon-800/30">
-              <h4 className="font-medium text-parchment-200 mb-3">Distribution des terrains (graphique)</h4>
+              <h4 className="font-medium text-parchment-200 mb-3">Land distribution (chart)</h4>
               <p className="text-sm text-parchment-400 mb-3">
-                Le graphique en barres montre la répartition du nombre de terrains dans les mains de départ :
+                The bar chart shows the distribution of lands in opening hands:
               </p>
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded bg-dragon-500" />
-                  <span className="text-parchment-400">0-1 terrain : <span className="text-dragon-400">Mana Screw</span></span>
+                  <span className="text-parchment-400">0-1 land: <span className="text-dragon-400">Mana Screw</span></span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded bg-green-500" />
-                  <span className="text-parchment-400">2-4 terrains : <span className="text-green-400">Zone optimale</span></span>
+                  <span className="text-parchment-400">2-4 lands: <span className="text-green-400">Optimal zone</span></span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded bg-blue-500" />
-                  <span className="text-parchment-400">5-7 terrains : <span className="text-blue-400">Mana Flood</span></span>
+                  <span className="text-parchment-400">5-7 lands: <span className="text-blue-400">Mana Flood</span></span>
                 </div>
               </div>
             </div>
 
             {/* Tips */}
             <div className="p-4 rounded-lg bg-gold-500/10 border border-gold-500/20">
-              <h4 className="font-medium text-gold-400 mb-2">📊 Recommandations générales</h4>
+              <h4 className="font-medium text-gold-400 mb-2">📊 General recommendations</h4>
               <ul className="space-y-1.5 text-sm text-parchment-400">
                 <li className="flex items-start gap-2">
                   <span className="text-gold-600">•</span>
-                  <span>Deck 60 cartes : <span className="text-parchment-200">23-26 terrains</span> selon la courbe</span>
+                  <span>60-card deck: <span className="text-parchment-200">23-26 lands</span> depending on curve</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gold-600">•</span>
-                  <span>Deck Commander : <span className="text-parchment-200">35-38 terrains</span> + 8-12 ramp</span>
+                  <span>Commander deck: <span className="text-parchment-200">35-38 lands</span> + 8-12 ramp</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gold-600">•</span>
-                  <span>Les MDFCs (Modal Double-Faced Cards) comptent comme demi-terrain</span>
+                  <span>MDFCs (Modal Double-Faced Cards) count as half a land</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gold-600">•</span>
-                  <span>Le mode <span className="text-arcane-400">Avancé</span> est recommandé pour les decks multicolores</span>
+                  <span>The <span className="text-arcane-400">Advanced</span> mode is recommended for multicolor decks</span>
                 </li>
               </ul>
             </div>

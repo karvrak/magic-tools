@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 const INITIAL_OWNERS = [
-  { name: 'Leo', color: '#D4AF37', isDefault: true },      // Gold - Propriétaire par défaut
+  { name: 'Leo', color: '#D4AF37', isDefault: true },      // Gold - Default owner
   { name: 'FH', color: '#8B5CF6', isDefault: false },      // Purple/Arcane
   { name: 'Tancrede', color: '#22C55E', isDefault: false }, // Green/Nature
 ]

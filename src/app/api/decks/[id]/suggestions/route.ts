@@ -23,8 +23,8 @@ async function askGrok(prompt: string): Promise<string> {
       messages: [
         {
           role: 'system',
-          content: `Tu es un expert Magic: The Gathering. Tu analyses des decks et suggères des cartes qui créent des synergies puissantes.
-Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`
+          content: `You are a Magic: The Gathering expert. You analyze decks and suggest cards that create powerful synergies.
+Respond ONLY with valid JSON, no markdown, no explanation.`
         },
         {
           role: 'user',
@@ -96,28 +96,28 @@ export async function GET(
     const colors = [...new Set(deck.cards.flatMap(dc => dc.card.colorIdentity || []))]
     const colorStr = colors.length > 0 ? colors.join('') : 'colorless'
 
-    const prompt = `Analyse ce deck Magic: The Gathering et suggère 10 cartes qui créeraient des synergies puissantes.
+    const prompt = `Analyze this Magic: The Gathering deck and suggest 10 cards that would create powerful synergies.
 
-Format du deck: ${deck.format || 'casual'}
-Couleurs: ${colorStr}
+Deck format: ${deck.format || 'casual'}
+Colors: ${colorStr}
 
-Cartes du deck:
+Deck cards:
 ${cardList}
 
-Réponds avec ce JSON exact:
+Respond with this exact JSON:
 {
-  "archetype": "nom de l'archétype détecté",
-  "synergies": ["synergie 1", "synergie 2"],
+  "archetype": "detected archetype name",
+  "synergies": ["synergy 1", "synergy 2"],
   "suggestions": [
-    {"name": "Nom Exact De La Carte EN ANGLAIS", "reason": "raison courte"}
+    {"name": "Exact Card Name IN ENGLISH", "reason": "short reason"}
   ]
 }
 
 IMPORTANT:
-- Utilise les NOMS ANGLAIS EXACTS des cartes Magic
-- Suggère des cartes de QUALITÉ (pas de communes nulles)
-- Les cartes doivent être jouables dans les couleurs ${colorStr}
-- Privilégie les cartes qui créent des combos ou amplifient les synergies existantes`
+- Use the EXACT ENGLISH NAMES of Magic cards
+- Suggest QUALITY cards (no bad commons)
+- Cards must be playable in ${colorStr} colors
+- Prioritize cards that create combos or amplify existing synergies`
 
     const grokResponse = await askGrok(prompt)
 
@@ -172,7 +172,7 @@ IMPORTANT:
       .map(card => ({
         ...card,
         score: card.rarity === 'mythic' ? 30 : card.rarity === 'rare' ? 20 : 10,
-        reasons: [reasonMap.get(card.name.toLowerCase()) || 'Synergie avec le deck'],
+        reasons: [reasonMap.get(card.name.toLowerCase()) || 'Synergy with the deck'],
       }))
       .slice(0, 12)
 

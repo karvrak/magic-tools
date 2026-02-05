@@ -12,7 +12,7 @@ interface FinishBattleInput {
   }[]
 }
 
-// POST /api/battles/[id]/finish - Terminer une bataille et enregistrer les résultats
+// POST /api/battles/[id]/finish - Finish a battle and record the results
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -21,7 +21,7 @@ export async function POST(
     const { id } = await params
     const body: FinishBattleInput = await request.json()
 
-    // Récupérer la bataille
+    // Retrieve the battle
     const battle = await prisma.battle.findUnique({
       where: { id },
       include: {
@@ -47,7 +47,7 @@ export async function POST(
 
     const modeConfig = GAME_MODES[battle.mode]
 
-    // Mettre à jour chaque joueur
+    // Update each player
     for (const playerUpdate of body.players) {
       await prisma.battlePlayer.update({
         where: { id: playerUpdate.id },
@@ -60,7 +60,7 @@ export async function POST(
       })
     }
 
-    // Calculer le gagnant selon le mode
+    // Calculate the winner based on the mode
     let winnerId: string | null = null
     let winnerTeam: number | null = null
 
@@ -75,7 +75,7 @@ export async function POST(
     })
 
     if (modeConfig.hasTeams) {
-      // Mode 2v2 : équipe avec le moins d'éliminés gagne
+      // 2v2 mode: team with the fewest eliminated players wins
       const team1Eliminated = updatedPlayers.filter((p) => p.team === 1 && p.isEliminated).length
       const team2Eliminated = updatedPlayers.filter((p) => p.team === 2 && p.isEliminated).length
 
@@ -84,20 +84,20 @@ export async function POST(
       } else if (team2Eliminated >= 2) {
         winnerTeam = 1
       } else {
-        // Égalité basée sur les PV totaux
+        // Tie based on total life points
         const team1Life = updatedPlayers.filter((p) => p.team === 1).reduce((sum, p) => sum + p.finalLife, 0)
         const team2Life = updatedPlayers.filter((p) => p.team === 2).reduce((sum, p) => sum + p.finalLife, 0)
         winnerTeam = team1Life >= team2Life ? 1 : 2
       }
     } else if (modeConfig.hasVictoryPoints) {
-      // Mode 1v1v1 : score = PV + VP
+      // 1v1v1 mode: score = life points + victory points
       const scores = updatedPlayers.map((p) => ({
         id: p.id,
         score: p.finalLife + p.victoryPoints,
         isEliminated: p.isEliminated,
       }))
 
-      // Survivants d'abord, puis par score
+      // Survivors first, then by score
       const sorted = scores.sort((a, b) => {
         if (a.isEliminated !== b.isEliminated) {
           return a.isEliminated ? 1 : -1
@@ -107,23 +107,23 @@ export async function POST(
 
       winnerId = sorted[0].id
     } else {
-      // Modes classiques : dernier survivant ou plus de PV
+      // Classic modes: last survivor or highest life points
       const survivors = updatedPlayers.filter((p) => !p.isEliminated)
 
       if (survivors.length === 1) {
         winnerId = survivors[0].id
       } else if (survivors.length > 1) {
-        // Plus de PV gagne
+        // Highest life points wins
         const sorted = survivors.sort((a, b) => b.finalLife - a.finalLife)
         winnerId = sorted[0].id
       } else {
-        // Tous éliminés - dernier à être éliminé (basé sur les PV finaux les plus hauts)
+        // All eliminated - last one to be eliminated (based on highest final life points)
         const sorted = updatedPlayers.sort((a, b) => b.finalLife - a.finalLife)
         winnerId = sorted[0].id
       }
     }
 
-    // Mettre à jour la bataille
+    // Update the battle
     const finishedBattle = await prisma.battle.update({
       where: { id },
       data: {
@@ -148,14 +148,14 @@ export async function POST(
       },
     })
 
-    // Construire le résultat
+    // Build the result
     const result: BattleResult = {
       winnerId: winnerId || undefined,
       winnerTeam: winnerTeam || undefined,
       winnerName: winnerId
         ? finishedBattle.players.find((p) => p.id === winnerId)?.deckName
         : winnerTeam
-        ? `Équipe ${winnerTeam}`
+        ? `Team ${winnerTeam}`
         : undefined,
       players: finishedBattle.players.map((p) => ({
         id: p.id,

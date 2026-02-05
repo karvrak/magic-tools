@@ -23,7 +23,7 @@ const navItems = [
   { href: '/sealed', label: 'Sealed', icon: Package, description: 'Limited format simulation' },
   { href: '/play', label: 'Multiplayer', icon: Users, description: 'Play with friends' },
   { href: '/battle', label: 'Arena', icon: Swords, description: 'Life counter & battles' },
-  { href: '/matches', label: 'Historique', icon: ScrollText, description: 'Match history & stats' },
+  { href: '/matches', label: 'History', icon: ScrollText, description: 'Match history & stats' },
   { href: '/collection', label: 'Collection', icon: Archive, description: 'Cards & wishlist' },
   { href: '/help', label: 'Tome of Knowledge', icon: HelpCircle, description: 'Help & shortcuts' },
 ]
@@ -221,7 +221,7 @@ export function Header() {
                         className="max-w-[80px] truncate"
                         style={{ color: activeOwner?.color || '#D4AF37' }}
                       >
-                        {ownerLoading ? '...' : activeOwner?.name || 'Tous'}
+                        {ownerLoading ? '...' : activeOwner?.name || 'All'}
                       </span>
                       <ChevronDown className={cn(
                         "w-3 h-3 text-gold-400 transition-transform",
@@ -230,7 +230,7 @@ export function Header() {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p>Utilisateur actif</p>
+                    <p>Active user</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -247,11 +247,11 @@ export function Header() {
                   >
                     <div className="p-2 border-b border-dungeon-700">
                       <p className="text-xs text-parchment-500 px-2">
-                        Utilisateur actif
+                        Active user
                       </p>
                     </div>
                     <div className="max-h-64 overflow-y-auto py-1">
-                      {/* Option "Tous" */}
+                      {/* Option "All" */}
                       <button
                         onClick={() => {
                           setActiveOwnerById(null)
@@ -266,7 +266,7 @@ export function Header() {
                       >
                         <UsersRound className="w-3.5 h-3.5 text-gold-400 flex-shrink-0" />
                         <span className="text-sm flex-1 text-gold-400">
-                          Tous
+                          All
                         </span>
                         {!activeOwner && (
                           <Check className="w-4 h-4 text-gold-400 flex-shrink-0" />
@@ -281,7 +281,7 @@ export function Header() {
                       {/* Owners list */}
                       {owners.length === 0 ? (
                         <p className="text-sm text-parchment-500 text-center py-4">
-                          Aucun utilisateur
+                          No user
                         </p>
                       ) : (
                         owners.map((owner) => (
@@ -359,7 +359,7 @@ export function Header() {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p>Deck actif pour Quick Add <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-dungeon-700 rounded">A</kbd></p>
+                    <p>Active deck for Quick Add <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-dungeon-700 rounded">A</kbd></p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -376,7 +376,7 @@ export function Header() {
                   >
                     <div className="p-2 border-b border-dungeon-700">
                       <p className="text-xs text-parchment-500 px-2">
-                        Deck actif pour Quick Add
+                        Active deck for Quick Add
                         {activeOwner && (
                           <span className="ml-1" style={{ color: activeOwner.color }}>
                             ({activeOwner.name})
@@ -402,7 +402,7 @@ export function Header() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm">Collection</p>
                           <p className="text-xs text-parchment-500">
-                            Ajouter à ma collection
+                            Add to my collection
                           </p>
                         </div>
                         {activeTarget?.type === 'collection' && (
@@ -416,10 +416,10 @@ export function Header() {
                       {/* Decks list */}
                       {availableDecks.length === 0 ? (
                         <p className="text-sm text-parchment-500 text-center py-4">
-                          Aucun deck disponible
+                          No deck available
                           {activeOwner && (
                             <span className="block text-xs mt-1">
-                              pour {activeOwner.name}
+                              for {activeOwner.name}
                             </span>
                           )}
                         </p>
@@ -446,7 +446,7 @@ export function Header() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm truncate">{deck.name}</p>
                               <p className="text-xs text-parchment-500">
-                                {deck.cardCount} cartes
+                                {deck.cardCount} cards
                                 {deck.format && <span className="ml-1">• {deck.format}</span>}
                               </p>
                             </div>
@@ -464,7 +464,7 @@ export function Header() {
                         className="flex items-center justify-center gap-2 w-full px-3 py-1.5 text-xs text-parchment-400 hover:text-parchment-200 transition-colors"
                       >
                         <Layers className="w-3.5 h-3.5" />
-                        Gérer les decks
+                        Manage decks
                       </Link>
                     </div>
                   </motion.div>
@@ -590,9 +590,9 @@ export function Header() {
                   transition={{ delay: navItems.length * 0.1 }}
                   className="px-4 py-2"
                 >
-                  <p className="text-xs text-parchment-500 mb-2 px-1">Utilisateur actif</p>
+                  <p className="text-xs text-parchment-500 mb-2 px-1">Active user</p>
                   <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {/* Option "Tous" */}
+                    {/* Option "All" */}
                     <button
                       onClick={() => {
                         setActiveOwnerById(null)
@@ -606,7 +606,7 @@ export function Header() {
                     >
                       <UsersRound className="w-4 h-4 text-gold-400" />
                       <span className="text-sm text-gold-400">
-                        Tous
+                        All
                       </span>
                       {!activeOwner && (
                         <Check className="w-4 h-4 text-gold-400 ml-auto" />
@@ -652,7 +652,7 @@ export function Header() {
                   className="px-4 py-2"
                 >
                   <p className="text-xs text-parchment-500 mb-2 px-1">
-                    Quick Add - Cible active
+                    Quick Add - Active target
                     {activeOwner && (
                       <span className="ml-1" style={{ color: activeOwner.color }}>
                         ({activeOwner.name})

@@ -64,14 +64,14 @@ export function DeckAvailability({ deckId }: DeckAvailabilityProps) {
       queryClient.invalidateQueries({ queryKey: ['wantlist'] })
       queryClient.invalidateQueries({ queryKey: ['collection'] })
       toast({
-        title: 'Cartes ajoutées',
+        title: 'Cards added',
         description: result.message,
       })
     },
     onError: () => {
       toast({
-        title: 'Erreur',
-        description: "Impossible d'ajouter les cartes à la wantlist.",
+        title: 'Error',
+        description: 'Failed to add cards to wantlist.',
         variant: 'destructive',
       })
     },
@@ -114,7 +114,7 @@ export function DeckAvailability({ deckId }: DeckAvailabilityProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Archive className={cn('w-5 h-5', statusColor)} />
-          <h3 className="font-medieval text-lg text-parchment-200">Disponibilité Collection</h3>
+          <h3 className="font-medieval text-lg text-parchment-200">Collection Availability</h3>
         </div>
 
         {/* Coverage badge */}
@@ -129,15 +129,15 @@ export function DeckAvailability({ deckId }: DeckAvailabilityProps) {
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="bg-dungeon-800/50 rounded p-2 text-center">
-          <p className="text-xs text-parchment-500">Cartes nécessaires</p>
+          <p className="text-xs text-parchment-500">Cards needed</p>
           <p className="text-lg font-bold text-parchment-200">{summary.totalCards}</p>
         </div>
         <div className="bg-dungeon-800/50 rounded p-2 text-center">
-          <p className="text-xs text-parchment-500">Possédées</p>
+          <p className="text-xs text-parchment-500">Owned</p>
           <p className="text-lg font-bold text-emerald-400">{summary.ownedCards}</p>
         </div>
         <div className="bg-dungeon-800/50 rounded p-2 text-center">
-          <p className="text-xs text-parchment-500">Manquantes</p>
+          <p className="text-xs text-parchment-500">Missing</p>
           <p className={cn(
             'text-lg font-bold',
             summary.missingCards > 0 ? 'text-dragon-400' : 'text-parchment-400'
@@ -146,7 +146,7 @@ export function DeckAvailability({ deckId }: DeckAvailabilityProps) {
           </p>
         </div>
         <div className="bg-dungeon-800/50 rounded p-2 text-center">
-          <p className="text-xs text-parchment-500">Cartes uniques</p>
+          <p className="text-xs text-parchment-500">Unique cards</p>
           <p className="text-lg font-bold text-parchment-200">{summary.uniqueCards}</p>
         </div>
       </div>
@@ -166,7 +166,7 @@ export function DeckAvailability({ deckId }: DeckAvailabilityProps) {
             ) : (
               <Heart className="w-4 h-4 mr-2" />
             )}
-            Ajouter {summary.missingCards} carte{summary.missingCards > 1 ? 's' : ''} manquante{summary.missingCards > 1 ? 's' : ''} à la wantlist
+            Add {summary.missingCards} missing card{summary.missingCards > 1 ? 's' : ''} to wantlist
           </Button>
 
           {/* Toggle missing cards list */}
@@ -177,12 +177,12 @@ export function DeckAvailability({ deckId }: DeckAvailabilityProps) {
             {showMissingCards ? (
               <>
                 <ChevronUp className="w-4 h-4" />
-                Masquer les cartes manquantes
+                Hide missing cards
               </>
             ) : (
               <>
                 <ChevronDown className="w-4 h-4" />
-                Voir les cartes manquantes ({missingCards.length})
+                View missing cards ({missingCards.length})
               </>
             )}
           </button>
@@ -215,7 +215,7 @@ export function DeckAvailability({ deckId }: DeckAvailabilityProps) {
       {summary.isComplete && (
         <div className="flex items-center gap-2 text-emerald-400 text-sm">
           <Check className="w-4 h-4" />
-          <span>Vous possédez toutes les cartes de ce deck !</span>
+          <span>You own all the cards in this deck!</span>
         </div>
       )}
     </div>

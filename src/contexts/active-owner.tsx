@@ -29,7 +29,7 @@ interface ActiveOwnerContextType {
 const ActiveOwnerContext = createContext<ActiveOwnerContextType | undefined>(undefined)
 
 const STORAGE_KEY = 'magictools-active-owner'
-const ALL_VALUE = 'all' // Valeur spéciale pour "Tous"
+const ALL_VALUE = 'all' // Special value for "All"
 
 export function ActiveOwnerProvider({ children }: { children: ReactNode }) {
   const [activeOwnerId, setActiveOwnerId] = useState<string | null>(null)

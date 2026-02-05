@@ -79,11 +79,11 @@ const TYPE_CATEGORIES = [
 function getCardTypeCategory(typeLine: string): string {
   const lowerType = typeLine.toLowerCase()
   
-  // Priorité : creature > planeswalker > land > instant > sorcery > artifact > enchantment
-  // Les doubles types sont classés dans leur type "principal" :
-  // - Artifact Land → Land (pas Artifact)
-  // - Enchantment Creature → Creature (pas Enchantment)
-  // - Land Creature → Creature
+  // Priority: creature > planeswalker > land > instant > sorcery > artifact > enchantment
+  // Dual types are classified by their "main" type:
+  // - Artifact Land -> Land (not Artifact)
+  // - Enchantment Creature -> Creature (not Enchantment)
+  // - Land Creature -> Creature
   if (lowerType.includes('creature')) return 'creature'
   if (lowerType.includes('planeswalker')) return 'planeswalker'
   if (lowerType.includes('land')) return 'land'
@@ -250,7 +250,7 @@ export function DeckStats({ cards }: DeckStatsProps) {
         </p>
         
         <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={cmcChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <XAxis 
                 dataKey="cmc" 
@@ -283,7 +283,7 @@ export function DeckStats({ cards }: DeckStatsProps) {
         </p>
         
         <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <PieChart>
               <Pie
                 data={typeChartData}

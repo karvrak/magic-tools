@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
-// GET /api/battles/[id] - Récupérer une bataille
+// GET /api/battles/[id] - Get a battle
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -44,7 +44,7 @@ export async function GET(
   }
 }
 
-// DELETE /api/battles/[id] - Supprimer une bataille
+// DELETE /api/battles/[id] - Delete a battle
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

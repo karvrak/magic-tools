@@ -32,10 +32,10 @@ export function BattleArena({
   const [showResult, setShowResult] = useState(false)
   const [battleResult, setBattleResult] = useState<BattleResult | null>(null)
   const [isFinishing, setIsFinishing] = useState(false)
-  const [showDiceRoll, setShowDiceRoll] = useState(true) // Montrer le lancer de dé au début
+  const [showDiceRoll, setShowDiceRoll] = useState(true) // Show dice roll at start
   const [startingPlayerId, setStartingPlayerId] = useState<string | null>(null)
 
-  // Gestion du lancer de dé initial
+  // Handle initial dice roll
   const handleDiceRollComplete = useCallback(
     (results: { playerId: string; roll: number }[], winnerId: string) => {
       setPlayers((prev) =>
@@ -53,7 +53,7 @@ export function BattleArena({
     []
   )
 
-  // Gestion des changements de vie - permet la résurrection
+  // Handle life changes - allows resurrection
   const handleLifeChange = useCallback(
     (playerId: string, newLife: number) => {
       setPlayers((prev) => {
@@ -63,14 +63,14 @@ export function BattleArena({
         const player = prev[playerIndex]
         const updated = [...prev]
 
-        // Mode 2v2 : transfert de vie si tombe à 0
+        // 2v2 mode: life transfer if drops to 0
         if (modeConfig.hasTeams && newLife <= 0 && !player.isEliminated) {
           const ally = prev.find(
             (p) => p.team === player.team && p.id !== playerId && !p.isEliminated
           )
 
           if (ally && ally.currentLife > 1) {
-            // Transfert de 1 PV de l'allié
+            // Transfer 1 HP from ally
             const allyIndex = prev.findIndex((p) => p.id === ally.id)
             updated[allyIndex] = {
               ...ally,
@@ -78,11 +78,11 @@ export function BattleArena({
             }
             updated[playerIndex] = {
               ...player,
-              currentLife: 1, // Revient à 1 PV
+              currentLife: 1, // Returns to 1 LP
             }
             return updated
           } else if (ally && ally.currentLife === 1) {
-            // L'allié n'a plus assez de PV, le joueur est éliminé
+            // Ally doesn't have enough LP, player is eliminated
             updated[playerIndex] = {
               ...player,
               currentLife: 0,
@@ -92,14 +92,14 @@ export function BattleArena({
           }
         }
 
-        // Cas normal - PERMET LA RÉSURRECTION si on ajoute des PV à un joueur éliminé
+        // Normal case - ALLOWS RESURRECTION if adding HP to an eliminated player
         const wasEliminated = player.isEliminated
         const willBeAlive = newLife > 0
 
         updated[playerIndex] = {
           ...player,
           currentLife: newLife,
-          // Si le joueur était éliminé et qu'on lui redonne des PV, il revient en vie
+          // If the player was eliminated and we give them HP, they come back to life
           isEliminated: wasEliminated && !willBeAlive ? true : !willBeAlive,
         }
 
@@ -129,7 +129,7 @@ export function BattleArena({
             [fromPlayer.toString()]: damage,
           }
 
-          // Vérifier si le joueur est éliminé par commander damage
+          // Check if player is eliminated by commander damage
           const isLethal = damage >= (modeConfig.commanderDamageThreshold || 21)
 
           return {
@@ -144,7 +144,7 @@ export function BattleArena({
   )
 
   const handleReset = useCallback(() => {
-    if (!confirm('Réinitialiser tous les points de vie ?')) return
+    if (!confirm('Reset all life points?')) return
 
     setPlayers(
       initialPlayers.map((p) => ({
@@ -158,7 +158,7 @@ export function BattleArena({
   }, [initialPlayers])
 
   const handleEndBattle = useCallback(async () => {
-    if (!confirm('Terminer la bataille et enregistrer les résultats ?')) return
+    if (!confirm('End battle and save results?')) return
 
     setIsFinishing(true)
     try {
@@ -192,21 +192,21 @@ export function BattleArena({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
-  // Vérifier si la bataille est terminée automatiquement
+  // Check if the battle is automatically over
   const activePlayers = players.filter((p) => !p.isEliminated)
   const isGameOver = modeConfig.hasTeams
     ? players.filter((p) => p.team === 1 && p.isEliminated).length >= 2 ||
       players.filter((p) => p.team === 2 && p.isEliminated).length >= 2
     : activePlayers.length <= 1
 
-  // Grid layout basé sur le nombre de joueurs
+  // Grid layout based on number of players
   const gridClass = {
     2: 'grid-cols-1 md:grid-cols-2',
     3: 'grid-cols-1 md:grid-cols-3',
     4: 'grid-cols-2',
   }[modeConfig.players]
 
-  // Trier les joueurs par ordre (le gagnant du dé en premier si applicable)
+  // Sort players by order (dice winner first if applicable)
   const sortedPlayers = startingPlayerId
     ? [...players].sort((a, b) => {
         if (a.id === startingPlayerId) return -1
@@ -215,7 +215,7 @@ export function BattleArena({
       })
     : players
 
-  // Afficher l'animation de lancer de dé
+  // Display dice roll animation
   if (showDiceRoll) {
     return (
       <DiceRollAnimation
@@ -301,7 +301,7 @@ export function BattleArena({
             <span className="font-medieval">
               {players.find((p) => p.id === startingPlayerId)?.deckName}
             </span>{' '}
-            commence la partie !
+            starts the game!
           </span>
         </motion.div>
       )}
@@ -332,7 +332,7 @@ export function BattleArena({
             className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
           >
             <div className="px-6 py-3 rounded-xl bg-gold-600/90 text-dungeon-900 font-medieval shadow-lg">
-              🏆 Battle terminée ! Cliquez sur &quot;End Battle&quot; pour enregistrer.
+              🏆 Battle finished! Click &quot;End Battle&quot; to save results.
             </div>
           </motion.div>
         )}

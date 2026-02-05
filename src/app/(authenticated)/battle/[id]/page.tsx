@@ -121,7 +121,7 @@ export default function BattleArenaPage({ params }: PageProps) {
   const battle = data.battle
   const modeConfig = GAME_MODES[battle.mode]
 
-  // Si la bataille est déjà terminée, rediriger vers l'historique
+  // If the battle is already finished, redirect to history
   if (battle.status === 'finished') {
     return (
       <EmptyState
@@ -136,7 +136,7 @@ export default function BattleArenaPage({ params }: PageProps) {
     )
   }
 
-  // Convertir les joueurs de la DB en état client
+  // Convert players from DB to client state
   const initialPlayers: PlayerState[] = battle.players.map((p) => ({
     id: p.id,
     deckId: p.deckId,

@@ -193,12 +193,12 @@ function SetAutocomplete({ value, onChange, placeholder, className }: SetAutocom
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
-  const [inputText, setInputText] = useState('') // Ce que l'user tape
-  const [selectedSet, setSelectedSet] = useState<SetSuggestion | null>(null) // Le set sélectionné
+  const [inputText, setInputText] = useState('') // What the user types
+  const [selectedSet, setSelectedSet] = useState<SetSuggestion | null>(null) // The selected set
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   
-  // Debounce pour les requêtes
+  // Debounce for requests
   const debouncedInput = useDebouncedValue(inputText, 200)
   
   // Fetch suggestions
@@ -218,9 +218,9 @@ function SetAutocomplete({ value, onChange, placeholder, className }: SetAutocom
     }
   }, [])
   
-  // Fetch quand l'input debouncé change
+  // Fetch when debounced input changes
   useEffect(() => {
-    // Ne pas fetch si on a déjà un set sélectionné et qu'on n'a pas modifié
+    // Don't fetch if we already have a selected set and haven't modified it
     if (selectedSet && inputText === selectedSet.name) {
       return
     }
@@ -232,7 +232,7 @@ function SetAutocomplete({ value, onChange, placeholder, className }: SetAutocom
     }
   }, [debouncedInput, fetchSuggestions, selectedSet, inputText])
   
-  // Reset si la valeur externe change à vide
+  // Reset if the external value changes to empty
   useEffect(() => {
     if (value === '' && selectedSet) {
       setSelectedSet(null)
@@ -254,8 +254,8 @@ function SetAutocomplete({ value, onChange, placeholder, className }: SetAutocom
   // Handle selection
   const handleSelect = (suggestion: SetSuggestion) => {
     setSelectedSet(suggestion)
-    setInputText(suggestion.name) // Afficher le nom complet
-    onChange(suggestion.code) // Envoyer le code au filtre
+    setInputText(suggestion.name) // Display full name
+    onChange(suggestion.code) // Send code to filter
     setIsOpen(false)
     setSelectedIndex(-1)
   }
@@ -264,7 +264,7 @@ function SetAutocomplete({ value, onChange, placeholder, className }: SetAutocom
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
     setInputText(newValue)
-    setSelectedSet(null) // Clear selection quand l'user tape
+    setSelectedSet(null) // Clear selection when user types
     setIsOpen(true)
     
     if (newValue === '') {
@@ -361,7 +361,7 @@ function SetAutocomplete({ value, onChange, placeholder, className }: SetAutocom
         <BookOpen className="w-4 h-4 text-dungeon-500" />
       </div>
       
-      {/* Badge du set sélectionné */}
+      {/* Selected set badge */}
       {selectedSet && (
         <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">
           <span className="text-[9px] text-gold-500 uppercase tracking-wider bg-dungeon-700/80 px-1 py-0.5 rounded">
@@ -420,7 +420,7 @@ function TypeAutocomplete({ value, onChange, placeholder, className }: TypeAutoc
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   
-  // Debounce la valeur pour éviter trop de requêtes
+  // Debounce value to avoid too many requests
   const debouncedValue = useDebouncedValue(value, 200)
   
   // Fetch suggestions
@@ -440,7 +440,7 @@ function TypeAutocomplete({ value, onChange, placeholder, className }: TypeAutoc
     }
   }, [])
   
-  // Fetch quand la valeur debouncée change
+  // Fetch when debounced value changes
   useEffect(() => {
     if (debouncedValue.length >= 1) {
       fetchSuggestions(debouncedValue)
@@ -466,11 +466,11 @@ function TypeAutocomplete({ value, onChange, placeholder, className }: TypeAutoc
   
   // Handle selection
   const handleSelect = (suggestion: string) => {
-    // Si la valeur actuelle contient déjà des mots, on ajoute le nouveau
+    // If current value already contains words, we add the new one
     const currentWords = value.split(/\s+/).filter(Boolean)
     const lastWord = currentWords[currentWords.length - 1]?.toLowerCase() || ''
-    
-    // Si le dernier mot est un préfixe de la suggestion, on le remplace
+
+    // If the last word is a prefix of the suggestion, replace it
     if (suggestion.toLowerCase().startsWith(lastWord)) {
       currentWords.pop()
     }
@@ -614,7 +614,7 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
         {/* Left Column - Primary Filters */}
         <div className="space-y-4 sm:space-y-6">
           {/* Mana Colors - The Elemental Forge */}
-          <FilterSection icon={Sparkles} title="Couleurs" delay={0}>
+          <FilterSection icon={Sparkles} title="Colors" delay={0}>
             <div className="flex flex-wrap gap-2 sm:gap-3 mb-2 sm:mb-3">
               {MTG_COLORS.map((color) => {
                 const config = MANA_CONFIG[color.code as keyof typeof MANA_CONFIG]
@@ -682,17 +682,17 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
                     <SelectContent>
                       <SelectItem value="include">
                         <span className="flex items-center gap-2">
-                          <span className="text-green-400">∪</span> Inclut ces couleurs
+                          <span className="text-green-400">∪</span> Includes these colors
                         </span>
                       </SelectItem>
                       <SelectItem value="exact">
                         <span className="flex items-center gap-2">
-                          <span className="text-gold-400">=</span> Exactement
+                          <span className="text-gold-400">=</span> Exactly
                         </span>
                       </SelectItem>
                       <SelectItem value="atMost">
                         <span className="flex items-center gap-2">
-                          <span className="text-blue-400">≤</span> Au plus
+                          <span className="text-blue-400">≤</span> At most
                         </span>
                       </SelectItem>
                     </SelectContent>
@@ -703,7 +703,7 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
           </FilterSection>
 
           {/* Rarity - Compact grid on mobile */}
-          <FilterSection icon={Crown} title="Rareté" delay={0.1}>
+          <FilterSection icon={Crown} title="Rarity" delay={0.1}>
             <div className="grid grid-cols-4 sm:grid-cols-2 gap-1.5 sm:gap-2">
               {RARITIES.map((rarity) => {
                 const config = RARITY_CONFIG[rarity.code as keyof typeof RARITY_CONFIG]
@@ -760,7 +760,7 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
           </FilterSection>
 
           {/* Mana Value */}
-          <FilterSection icon={Wand2} title="Coût de mana" delay={0.2}>
+          <FilterSection icon={Wand2} title="Mana cost" delay={0.2}>
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="relative flex-1">
                 <Input
@@ -805,11 +805,11 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
         {/* Right Column - Secondary Filters */}
         <div className="space-y-4 sm:space-y-6">
           {/* Card Text - The Scriptorium */}
-          <FilterSection icon={Scroll} title="Texte" delay={0.05}>
+          <FilterSection icon={Scroll} title="Text" delay={0.05}>
             <div className="space-y-2 sm:space-y-3">
               <div className="relative">
                 <Input
-                  placeholder="Texte de la carte..."
+                  placeholder="Card text..."
                   value={filters.text}
                   onChange={(e) => updateFilter('text', e.target.value)}
                   className="bg-dungeon-800/50 border-dungeon-600 pl-3 pr-10 text-sm sm:text-base h-10 sm:h-auto"
@@ -836,10 +836,10 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
                 onValueChange={(value) => updateFilter('format', value === 'all' ? '' : value)}
               >
                 <SelectTrigger className="bg-dungeon-800/50 border-dungeon-600 text-sm h-10 sm:h-auto">
-                  <SelectValue placeholder="Tous" />
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
                   {FORMATS.map((format) => (
                     <SelectItem key={format.code} value={format.code}>
                       {format.name}
@@ -850,7 +850,7 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
             </FilterSection>
 
             {/* Set - The Archive */}
-            <FilterSection icon={BookOpen} title="Extension" delay={0.2}>
+            <FilterSection icon={BookOpen} title="Set" delay={0.2}>
               <SetAutocomplete
                 value={filters.set}
                 onChange={(value) => updateFilter('set', value)}
@@ -861,7 +861,7 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
           </div>
 
           {/* Price - The Merchant's Ledger */}
-          <FilterSection icon={Coins} title="Prix (€)" delay={0.25}>
+          <FilterSection icon={Coins} title="Price (€)" delay={0.25}>
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="relative flex-1">
                 <Input

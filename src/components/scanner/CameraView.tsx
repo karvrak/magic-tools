@@ -43,7 +43,7 @@ export function CameraView({
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-10 h-10 animate-spin text-arcane-400 mx-auto mb-3" />
-            <p className="text-parchment-400 text-sm">Initialisation de la caméra...</p>
+            <p className="text-parchment-400 text-sm">Initializing camera...</p>
           </div>
         </div>
       )}
@@ -103,7 +103,7 @@ export function CameraView({
           {!isProcessing && (
             <div className="absolute bottom-4 left-0 right-0 text-center">
               <p className="text-parchment-300 text-xs bg-black/50 inline-block px-3 py-1 rounded-full">
-                Placez le nom de la carte dans le cadre
+                Place the card name within the frame
               </p>
             </div>
           )}

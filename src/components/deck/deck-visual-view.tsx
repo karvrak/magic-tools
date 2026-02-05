@@ -21,7 +21,7 @@ interface DeckCard {
 interface DeckVisualViewProps {
   cards: DeckCard[]
   groupBy: 'cmc' | 'type'
-  onCardClick?: (card: CardWithPrice) => void
+  onCardClick?: (deckCard: DeckCard) => void
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -67,11 +67,11 @@ const TYPE_COLORS: Record<string, string> = {
 
 function getCardTypeCategory(typeLine: string): string {
   const lowerType = typeLine.toLowerCase()
-  // Priorité : creature > planeswalker > land > instant > sorcery > artifact > enchantment
-  // Les doubles types sont classés dans leur type "principal" :
-  // - Artifact Land → Land (pas Artifact)
-  // - Enchantment Creature → Creature (pas Enchantment)
-  // - Land Creature → Creature
+  // Priority: creature > planeswalker > land > instant > sorcery > artifact > enchantment
+  // Dual types are classified by their "main" type:
+  // - Artifact Land -> Land (not Artifact)
+  // - Enchantment Creature -> Creature (not Enchantment)
+  // - Land Creature -> Creature
   if (lowerType.includes('creature')) return 'creature'
   if (lowerType.includes('planeswalker')) return 'planeswalker'
   if (lowerType.includes('land')) return 'land'
@@ -149,7 +149,7 @@ function groupCardsByType(cards: DeckCard[]): Map<string, DeckCard[]> {
 interface CardStackProps {
   cards: DeckCard[]
   onCardHover: (card: CardWithPrice | null, rect: DOMRect | null) => void
-  onCardClick?: (card: CardWithPrice) => void
+  onCardClick?: (deckCard: DeckCard) => void
 }
 
 function CardStack({ cards, onCardHover, onCardClick }: CardStackProps) {
@@ -185,7 +185,7 @@ function CardStack({ cards, onCardHover, onCardClick }: CardStackProps) {
           transition={{ delay: Math.min(index * 0.015, 0.3), duration: 0.2 }}
           onMouseEnter={(e) => handleMouseEnter(dc.card, e)}
           onMouseLeave={handleMouseLeave}
-          onClick={() => onCardClick?.(dc.card)}
+          onClick={() => onCardClick?.(dc)}
         >
           <div 
             className={cn(
@@ -336,12 +336,12 @@ function DeckSummary({ cards }: DeckSummaryProps) {
       <div className="flex items-center gap-1.5 sm:gap-2">
         <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-nature-500" />
         <span className="text-parchment-200 text-xs sm:text-sm">{stats.creatures}</span>
-        <span className="hidden sm:inline text-parchment-400 text-sm">Créatures</span>
+        <span className="hidden sm:inline text-parchment-400 text-sm">Creatures</span>
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2">
         <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-arcane-500" />
         <span className="text-parchment-200 text-xs sm:text-sm">{stats.spells}</span>
-        <span className="hidden sm:inline text-parchment-400 text-sm">Sorts</span>
+        <span className="hidden sm:inline text-parchment-400 text-sm">Spells</span>
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2">
         <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-lime-500" />

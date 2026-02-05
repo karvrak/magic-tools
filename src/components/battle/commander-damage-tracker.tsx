@@ -115,7 +115,7 @@ export function CommanderDamageTracker({
 
       {/* Threshold indicator */}
       <p className="text-xs text-dungeon-500 text-center">
-        {threshold} = élimination
+        {threshold} = elimination
       </p>
     </div>
   )

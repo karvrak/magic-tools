@@ -28,7 +28,7 @@ export function LifeCounter({
 
   const lifePercentage = Math.max(0, Math.min(100, (life / startingLife) * 100))
 
-  // Couleur basée sur les PV
+  // Color based on life points
   const getLifeColor = () => {
     if (isEliminated || life <= 0) return 'text-dungeon-500'
     if (lifePercentage <= 25) return 'text-dragon-500'
@@ -172,7 +172,7 @@ export function LifeCounter({
               className="absolute inset-0 flex items-center justify-center"
             >
               <span className="text-lg font-medieval text-dragon-500 bg-dungeon-900/80 px-3 py-1 rounded border border-dragon-600/50">
-                ☠️ ÉLIMINÉ
+                ☠️ ELIMINATED
               </span>
             </motion.div>
           )}

@@ -433,7 +433,7 @@ export function MultiplayerPlaytest({
   if (!currentPlayer) {
     return (
       <div className="card-frame p-6 text-center">
-        <p className="text-dragon-400">Erreur: joueur non trouvé</p>
+        <p className="text-dragon-400">Error: player not found</p>
       </div>
     )
   }
@@ -485,13 +485,13 @@ export function MultiplayerPlaytest({
                   <p className="font-medium text-parchment-200 flex items-center gap-2">
                     {player.name}
                     {player.id === playerId && (
-                      <span className="text-xs text-arcane-400">(vous)</span>
+                      <span className="text-xs text-arcane-400">(you)</span>
                     )}
                   </p>
                   {player.deckName ? (
                     <p className="text-sm text-parchment-500">{player.deckName}</p>
                   ) : (
-                    <p className="text-sm text-parchment-600 italic">Sans deck</p>
+                    <p className="text-sm text-parchment-600 italic">No deck</p>
                   )}
                 </div>
               </div>
@@ -500,12 +500,12 @@ export function MultiplayerPlaytest({
                 {player.isReady ? (
                   <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-medium">
                     <Check className="w-4 h-4" />
-                    Prêt
+                    Ready
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5 px-3 py-1.5 bg-dungeon-700 text-parchment-500 rounded-full text-sm">
                     <Clock className="w-4 h-4" />
-                    En attente
+                    Waiting
                   </span>
                 )}
               </div>
@@ -522,7 +522,7 @@ export function MultiplayerPlaytest({
               onClick={() => onSetReady(false)}
               className="min-w-[200px]"
             >
-              Annuler
+              Cancel
             </Button>
           ) : (
             <Button
@@ -531,13 +531,13 @@ export function MultiplayerPlaytest({
               className="min-w-[200px]"
             >
               <Check className="w-5 h-5 mr-2" />
-              Je suis prêt !
+              I'm ready!
             </Button>
           )}
           
           {!allPlayersReady && (
             <p className="text-parchment-500 text-sm mt-3">
-              En attente que tous les joueurs soient prêts...
+              Waiting for all players to be ready...
             </p>
           )}
         </div>
@@ -572,7 +572,7 @@ export function MultiplayerPlaytest({
                   {opponent.deckName || opponent.name}
                 </span>
                 {opponent.id === activePlayerId && (
-                  <span className="text-[10px] bg-gold-500/30 text-gold-400 px-1 rounded">Tour</span>
+                  <span className="text-[10px] bg-gold-500/30 text-gold-400 px-1 rounded">Turn</span>
                 )}
                 {opponent.isEliminated && <Skull className="w-3 h-3 text-dragon-400" />}
               </div>
@@ -607,7 +607,7 @@ export function MultiplayerPlaytest({
       {/* ===== CENTER DIVIDER ===== */}
       <div className="flex items-center justify-center py-2 text-parchment-600">
         <div className="flex-1 h-px bg-dungeon-600" />
-        <span className="px-3 text-xs">Tour {currentTurn}</span>
+        <span className="px-3 text-xs">Turn {currentTurn}</span>
         <div className="flex-1 h-px bg-dungeon-600" />
       </div>
 
@@ -655,7 +655,7 @@ export function MultiplayerPlaytest({
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-gold-400 flex items-center gap-2">
                 <Library className="w-4 h-4" />
-                Bibliothèque ({library.length}) - Top 20
+                Library ({library.length}) - Top 20
               </h3>
               <button onClick={() => setShowLibrary(false)} className="text-parchment-400 hover:text-parchment-200">
                 <EyeOff className="w-4 h-4" />
@@ -685,7 +685,7 @@ export function MultiplayerPlaytest({
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-gold-400 flex items-center gap-2">
                 <Trash2 className="w-4 h-4" />
-                Cimetière ({graveyard.length})
+                Graveyard ({graveyard.length})
               </h3>
               <button onClick={() => setShowGraveyard(false)} className="text-parchment-400 hover:text-parchment-200">
                 <EyeOff className="w-4 h-4" />
@@ -706,10 +706,10 @@ export function MultiplayerPlaytest({
                     </div>
                   </WithHoverPreview>
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
-                    <button onClick={() => graveyardToHand(index)} className="p-1 bg-blue-600 hover:bg-blue-500 text-white rounded shadow-md" title="Renvoyer en main">
+                    <button onClick={() => graveyardToHand(index)} className="p-1 bg-blue-600 hover:bg-blue-500 text-white rounded shadow-md" title="Return to hand">
                       <Hand className="w-3 h-3" />
                     </button>
-                    <button onClick={() => graveyardToBattlefield(index)} className="p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded shadow-md" title="Mettre sur le champ de bataille">
+                    <button onClick={() => graveyardToBattlefield(index)} className="p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded shadow-md" title="Put onto battlefield">
                       <Play className="w-3 h-3" />
                     </button>
                   </div>
@@ -766,12 +766,12 @@ export function MultiplayerPlaytest({
             {isMyTurn && <span className="text-[10px] text-gold-400">●</span>}
             {fullDeck.length > 0 && (
               <Button variant="ghost" size="sm" onClick={() => draw(1)} disabled={library.length === 0} className="h-7 px-2 text-xs">
-                Piocher
+                Draw
               </Button>
             )}
             {isMyTurn && (
               <Button size="sm" onClick={handleNextTurn} className="h-7 px-2 text-xs">
-                Fin
+                End
               </Button>
             )}
           </div>
@@ -790,13 +790,13 @@ export function MultiplayerPlaytest({
                   exit={{ opacity: 0, scale: 0.9 }}
                   className="relative group"
                 >
-                  <WithHoverPreview card={{ name: card?.printedName || card?.name || 'Carte', image: card?.imageNormal || null, type: card?.typeLine }}>
+                  <WithHoverPreview card={{ name: card?.printedName || card?.name || 'Card', image: card?.imageNormal || null, type: card?.typeLine }}>
                     <div className="w-[70px] h-[98px] rounded overflow-hidden relative hover:scale-110 transition-transform cursor-pointer">
                       {card?.imageNormal ? (
                         <Image src={card.imageNormal} alt={card.name || 'Card'} fill className="object-cover" sizes="70px" />
                       ) : (
                         <div className="w-full h-full bg-dungeon-800 flex items-center justify-center p-1">
-                          <span className="text-[8px] text-center text-parchment-500">{card?.name || 'Carte'}</span>
+                          <span className="text-[8px] text-center text-parchment-500">{card?.name || 'Card'}</span>
                         </div>
                       )}
                     </div>
@@ -812,7 +812,7 @@ export function MultiplayerPlaytest({
                 </motion.div>
               ))}
             </AnimatePresence>
-            {hand.length === 0 && <p className="text-parchment-600 italic text-xs py-6">Main vide</p>}
+            {hand.length === 0 && <p className="text-parchment-600 italic text-xs py-6">Empty hand</p>}
           </div>
         )}
       </div>
@@ -868,10 +868,10 @@ function BattlefieldCardMini({
         <button onClick={(e) => { e.stopPropagation(); onTap(); }} className="p-0.5 bg-arcane-600/90 text-white rounded" title="Tap">
           <RotateCw className="w-2.5 h-2.5" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onBounce(); }} className="p-0.5 bg-blue-600/90 text-white rounded" title="Main">
+        <button onClick={(e) => { e.stopPropagation(); onBounce(); }} className="p-0.5 bg-blue-600/90 text-white rounded" title="Hand">
           <Undo2 className="w-2.5 h-2.5" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onGraveyard(); }} className="p-0.5 bg-dragon-600/90 text-white rounded" title="Cimetière">
+        <button onClick={(e) => { e.stopPropagation(); onGraveyard(); }} className="p-0.5 bg-dragon-600/90 text-white rounded" title="Graveyard">
           <Trash2 className="w-2.5 h-2.5" />
         </button>
       </div>

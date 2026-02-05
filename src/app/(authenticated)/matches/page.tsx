@@ -180,10 +180,10 @@ export default function MatchesPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-cinzel font-bold text-gold-400">
-              Historique des Parties
+              Match History
             </h1>
             <p className="text-parchment-400 mt-1">
-              {data?.total ?? 0} parties enregistrees
+              {data?.total ?? 0} matches recorded
             </p>
           </div>
           <Link
@@ -191,7 +191,7 @@ export default function MatchesPage() {
             className="flex items-center gap-2 px-4 py-2 bg-arcane-600 hover:bg-arcane-500 text-white rounded-lg transition-colors"
           >
             <BarChart3 className="w-5 h-5" />
-            Voir les Stats
+            View Stats
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -219,7 +219,7 @@ export default function MatchesPage() {
               {importMutation.isPending ? (
                 <>
                   <Loader2 className="w-12 h-12 text-gold-400 animate-spin" />
-                  <p className="text-parchment-300">Import en cours...</p>
+                  <p className="text-parchment-300">Importing...</p>
                 </>
               ) : (
                 <>
@@ -232,14 +232,14 @@ export default function MatchesPage() {
                   </div>
                   <div>
                     <p className="text-lg text-parchment-200">
-                      Glisse ton fichier Excel ici
+                      Drop your Excel file here
                     </p>
                     <p className="text-sm text-parchment-500 mt-1">
-                      ou clique pour selectionner (formats: .xlsx, .xls, .csv)
+                      or click to select (formats: .xlsx, .xls, .csv)
                     </p>
                   </div>
                   <div className="text-xs text-parchment-600 bg-dungeon-900/50 px-4 py-2 rounded-lg">
-                    Colonnes attendues: <span className="text-parchment-400">date</span>,{' '}
+                    Expected columns: <span className="text-parchment-400">date</span>,{' '}
                     <span className="text-parchment-400">deck1</span>,{' '}
                     <span className="text-parchment-400">deck2</span>,{' '}
                     <span className="text-parchment-400">score1</span>,{' '}
@@ -275,17 +275,17 @@ export default function MatchesPage() {
                   )}
                   <div className="flex-1">
                     <p className="text-parchment-200">
-                      <span className="font-semibold text-nature-400">{importResult.imported}</span> parties importees
+                      <span className="font-semibold text-nature-400">{importResult.imported}</span> matches imported
                       {importResult.errors > 0 && (
                         <span className="text-dragon-400 ml-2">
-                          ({importResult.errors} erreurs)
+                          ({importResult.errors} errors)
                         </span>
                       )}
                     </p>
                     {importResult.errorDetails.length > 0 && (
                       <ul className="mt-2 text-sm text-parchment-500">
                         {importResult.errorDetails.map((err, i) => (
-                          <li key={i}>Ligne {err.row}: {err.error}</li>
+                          <li key={i}>Row {err.row}: {err.error}</li>
                         ))}
                       </ul>
                     )}
@@ -313,7 +313,7 @@ export default function MatchesPage() {
                 setSearchQuery(e.target.value)
                 setPage(0)
               }}
-              placeholder="Rechercher un deck..."
+              placeholder="Search a deck..."
               className="w-full pl-10 pr-4 py-2 bg-dungeon-800 border border-dungeon-600 rounded-lg text-parchment-200 placeholder-parchment-600 focus:outline-none focus:border-gold-500"
             />
           </div>
@@ -321,7 +321,7 @@ export default function MatchesPage() {
           {(data?.total ?? 0) > 0 && (
             <button
               onClick={() => {
-                if (confirm('Supprimer TOUTES les parties ? Cette action est irreversible.')) {
+                if (confirm('Delete ALL matches? This action is irreversible.')) {
                   deleteAllMutation.mutate()
                 }
               }}
@@ -333,7 +333,7 @@ export default function MatchesPage() {
               ) : (
                 <Trash2 className="w-4 h-4" />
               )}
-              Tout supprimer
+              Delete all
             </button>
           )}
         </div>
@@ -346,8 +346,8 @@ export default function MatchesPage() {
         ) : (data?.matches?.length ?? 0) === 0 ? (
           <div className="text-center py-16 text-parchment-500">
             <Swords className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p className="text-xl">Aucune partie enregistree</p>
-            <p className="text-sm mt-2">Importe ton fichier Excel pour commencer</p>
+            <p className="text-xl">No matches recorded</p>
+            <p className="text-sm mt-2">Import your Excel file to get started</p>
           </div>
         ) : (
           <>
@@ -407,7 +407,7 @@ export default function MatchesPage() {
                       ) : match.score1 < match.score2 ? (
                         <Trophy className="w-5 h-5 text-dungeon-600" />
                       ) : (
-                        <span className="text-parchment-600 text-sm">Egal</span>
+                        <span className="text-parchment-600 text-sm">Draw</span>
                       )}
                     </div>
                   </div>
@@ -423,7 +423,7 @@ export default function MatchesPage() {
                   disabled={page === 0}
                   className="px-3 py-1 bg-dungeon-700 hover:bg-dungeon-600 disabled:opacity-50 disabled:cursor-not-allowed rounded text-parchment-300"
                 >
-                  Precedent
+                  Previous
                 </button>
                 <span className="text-parchment-500 px-4">
                   Page {page + 1} / {totalPages}
@@ -433,7 +433,7 @@ export default function MatchesPage() {
                   disabled={page >= totalPages - 1}
                   className="px-3 py-1 bg-dungeon-700 hover:bg-dungeon-600 disabled:opacity-50 disabled:cursor-not-allowed rounded text-parchment-300"
                 >
-                  Suivant
+                  Next
                 </button>
               </div>
             )}

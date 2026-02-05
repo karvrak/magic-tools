@@ -32,17 +32,17 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
   const [phase, setPhase] = useState<'waiting' | 'rolling' | 'complete'>('waiting')
   const [winner, setWinner] = useState<DiceResult | null>(null)
 
-  // Lancer tous les dés simultanément
+  // Roll all dice simultaneously
   const rollAllDice = useCallback(() => {
-    // Durée d'animation réduite (800ms)
+    // Reduced animation duration (800ms)
     const rollDuration = 800
 
-    // Marquer tous comme "rolling" en même temps
+    // Mark all as "rolling" at the same time
     setDiceResults((prev) =>
       prev.map((result) => ({ ...result, isRolling: true }))
     )
 
-    // Animation de changement de valeur pour tous les dés
+    // Animation of value change for all dice
     const intervalId = setInterval(() => {
       setDiceResults((prev) =>
         prev.map((result) => ({
@@ -52,7 +52,7 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
       )
     }, 60)
 
-    // Résultats finaux pour tous en même temps
+    // Final results for all at the same time
     setTimeout(() => {
       clearInterval(intervalId)
       setDiceResults((prev) =>
@@ -67,28 +67,28 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
     }, rollDuration)
   }, [])
 
-  // Démarrer les lancers simultanés
+  // Start simultaneous rolls
   const startRolling = useCallback(() => {
     setPhase('rolling')
     rollAllDice()
   }, [rollAllDice])
 
-  // Déterminer le gagnant quand tous ont lancé
+  // Determine the winner when all have rolled
   useEffect(() => {
     if (phase !== 'complete') return
 
     const allRolled = diceResults.every((r) => r.hasRolled && r.roll !== null)
     if (!allRolled) return
 
-    // Trouver le plus haut score
+    // Find the highest score
     const maxRoll = Math.max(...diceResults.map((r) => r.roll || 0))
     const winners = diceResults.filter((r) => r.roll === maxRoll)
 
-    // En cas d'égalité, on prend le premier (ou on pourrait relancer)
+    // In case of a tie, take the first one (or could re-roll)
     const finalWinner = winners[0]
     setWinner(finalWinner)
 
-    // Notifier après un court délai
+    // Notify after a short delay
     setTimeout(() => {
       onComplete(
         diceResults.map((r) => ({ playerId: r.playerId, roll: r.roll || 0 })),
@@ -107,14 +107,14 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
           className="text-center mb-8"
         >
           <h2 className="font-display text-3xl md:text-4xl text-gold-400 mb-2">
-            🎲 Qui commence ?
+            🎲 Who goes first?
           </h2>
           <p className="text-parchment-400 font-body">
-            {phase === 'waiting' && 'Lancez les dés pour déterminer l\'ordre de jeu !'}
-            {phase === 'rolling' && 'Les dés roulent...'}
+            {phase === 'waiting' && 'Roll the dice to determine the play order!'}
+            {phase === 'rolling' && 'The dice are rolling...'}
             {phase === 'complete' && winner && (
               <span className="text-gold-300">
-                <span className="font-medieval">{winner.deckName}</span> commence avec un{' '}
+                <span className="font-medieval">{winner.deckName}</span> goes first with a{' '}
                 <span className="text-2xl font-bold">{winner.roll}</span> !
               </span>
             )}
@@ -241,7 +241,7 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
               {/* Status */}
               <div className="text-center">
                 {!result.hasRolled && !result.isRolling && (
-                  <span className="text-sm text-parchment-500">En attente...</span>
+                  <span className="text-sm text-parchment-500">Waiting...</span>
                 )}
                 {result.isRolling && (
                   <motion.span
@@ -249,7 +249,7 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
                     animate={{ opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 0.5, repeat: Infinity }}
                   >
-                    Lance le dé...
+                    Rolling...
                   </motion.span>
                 )}
                 {result.hasRolled && !result.isRolling && winner?.playerId === result.playerId && (
@@ -258,12 +258,12 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
                     animate={{ scale: 1 }}
                     className="text-sm font-bold text-gold-400"
                   >
-                    🏆 PREMIER !
+                    🏆 FIRST!
                   </motion.span>
                 )}
                 {result.hasRolled && !result.isRolling && winner?.playerId !== result.playerId && (
                   <span className="text-sm text-parchment-500">
-                    Score : {result.roll}
+                    Score: {result.roll}
                   </span>
                 )}
               </div>
@@ -291,7 +291,7 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
                 'transition-all duration-300'
               )}
             >
-              🎲 Lancer les Dés !
+              🎲 Roll the Dice!
             </motion.button>
           </motion.div>
         )}
@@ -304,7 +304,7 @@ export function DiceRollAnimation({ players, onComplete }: DiceRollAnimationProp
             className="text-center"
           >
             <p className="text-parchment-400 text-sm">
-              Préparation de l&apos;arène...
+              Preparing the arena...
             </p>
           </motion.div>
         )}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET /api/sessions/[code] - Récupérer l'état de la session
+// GET /api/sessions/[code] - Get the session state
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -35,7 +35,7 @@ export async function GET(
   }
 }
 
-// POST /api/sessions/[code] - Rejoindre la session
+// POST /api/sessions/[code] - Join the session
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -83,12 +83,12 @@ export async function POST(
       )
     }
 
-    // Vérifier si un joueur avec ce nom existe déjà
+    // Check if a player with this name already exists
     const existingPlayer = session.players.find(
       p => p.name.toLowerCase() === playerName.toLowerCase()
     )
     if (existingPlayer) {
-      // Reconnecter le joueur existant
+      // Reconnect the existing player
       const updatedPlayer = await prisma.gamePlayer.update({
         where: { id: existingPlayer.id },
         data: { 
@@ -109,7 +109,7 @@ export async function POST(
       })
     }
 
-    // Ajouter un nouveau joueur
+    // Add a new player
     const nextOrder = Math.max(...session.players.map(p => p.playerOrder), 0) + 1
 
     const player = await prisma.gamePlayer.create({
@@ -143,7 +143,7 @@ export async function POST(
   }
 }
 
-// PATCH /api/sessions/[code] - Mettre à jour la session (démarrer, terminer, etc.)
+// PATCH /api/sessions/[code] - Update the session (start, finish, etc.)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -165,7 +165,7 @@ export async function PATCH(
       )
     }
 
-    // Actions spéciales
+    // Special actions
     if (action === 'start') {
       if (session.players.length < 2) {
         return NextResponse.json(
@@ -193,7 +193,7 @@ export async function PATCH(
       const activePlayers = session.players.filter(p => !p.isEliminated)
       
       if (activePlayers.length <= 1) {
-        // Partie terminée
+        // Game finished
         const winner = activePlayers[0]
         const updatedSession = await prisma.gameSession.update({
           where: { id: session.id },
@@ -206,7 +206,7 @@ export async function PATCH(
         return NextResponse.json({ session: updatedSession, winner })
       }
 
-      // Trouver le prochain joueur actif
+      // Find the next active player
       let nextIndex = (currentIndex + 1) % session.players.length
       while (session.players[nextIndex].isEliminated) {
         nextIndex = (nextIndex + 1) % session.players.length
@@ -238,7 +238,7 @@ export async function PATCH(
       return NextResponse.json({ session: updatedSession })
     }
 
-    // Mise à jour générale
+    // General update
     const updatedSession = await prisma.gameSession.update({
       where: { id: session.id },
       data: updates,
@@ -255,7 +255,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/sessions/[code] - Supprimer la session
+// DELETE /api/sessions/[code] - Delete the session
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }

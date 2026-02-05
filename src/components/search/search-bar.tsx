@@ -33,7 +33,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
         <Input
           ref={ref}
           type="text"
-          placeholder="Rechercher une carte..."
+          placeholder="Search for a card..."
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="pl-8 sm:pl-10 h-10 sm:h-12 text-sm sm:text-base"
@@ -61,7 +61,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
           )}
         >
           <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="hidden sm:inline ml-2 font-medieval">Filtres</span>
+          <span className="hidden sm:inline ml-2 font-medieval">Filters</span>
           
           {/* Active filters indicator */}
           {hasActiveFilters && !showFiltersActive && (

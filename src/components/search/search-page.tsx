@@ -256,10 +256,10 @@ export function SearchPage() {
       <FadeIn>
         <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
           <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-gold-500" />
-          <h1 className="font-display text-xl sm:text-2xl text-gold-400">Recherche</h1>
+          <h1 className="font-display text-xl sm:text-2xl text-gold-400">Search</h1>
         </div>
         <p className="text-parchment-500 text-xs sm:text-sm hidden sm:block">
-          Parcourir la collection de cartes
+          Browse the card collection
         </p>
       </FadeIn>
 
@@ -277,7 +277,7 @@ export function SearchPage() {
               }
             >
               <SearchIcon className="w-4 h-4 mr-1.5" />
-              Toutes
+              All
             </Button>
             <Button
               variant={filters.newness === 'all_new' ? 'default' : 'outline'}
@@ -289,7 +289,7 @@ export function SearchPage() {
               }
             >
               <Sparkles className="w-4 h-4 mr-1.5" />
-              Nouveautés
+              New releases
               <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-emerald-500/20">
                 {newnessStats.total}
               </span>
@@ -304,7 +304,7 @@ export function SearchPage() {
               }
             >
               <Star className="w-4 h-4 mr-1.5" />
-              Nouvelles cartes
+              New cards
               <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-gold-500/20">
                 {newnessStats.newCards}
               </span>
@@ -319,7 +319,7 @@ export function SearchPage() {
               }
             >
               <Palette className="w-4 h-4 mr-1.5" />
-              Nouveaux artworks
+              New artworks
               <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-violet-500/20">
                 {newnessStats.newArt}
               </span>
@@ -372,10 +372,10 @@ export function SearchPage() {
                       </motion.div>
                       <div>
                         <h2 className="font-display text-sm sm:text-lg text-gold-400 tracking-wide">
-                          Filtres
+                          Filters
                         </h2>
                         <p className="text-[10px] sm:text-xs text-dungeon-400 font-body hidden sm:block">
-                          Affiner la recherche
+                          Refine search
                         </p>
                       </div>
                     </div>
@@ -422,14 +422,14 @@ export function SearchPage() {
                 {showLoading ? (
                   <span className="flex items-center gap-2">
                     <span className="animate-pulse">
-                      {isTyping ? 'Recherche...' : 'Chargement...'}
+                      {isTyping ? 'Searching...' : 'Loading...'}
                     </span>
                   </span>
                 ) : error ? (
-                  <span className="text-dragon-400">Erreur de recherche</span>
+                  <span className="text-dragon-400">Search error</span>
                 ) : data ? (
                   <>
-                    <span className="text-gold-400 font-semibold">{data.total.toLocaleString()}</span> cartes trouvées
+                    <span className="text-gold-400 font-semibold">{data.total.toLocaleString()}</span> cards found
                   </>
                 ) : null}
               </p>
@@ -529,7 +529,7 @@ export function SearchPage() {
                 className="h-9 sm:h-10 px-3 sm:px-4"
               >
                 <ChevronLeft className="w-4 h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Précédent</span>
+                <span className="hidden sm:inline">Previous</span>
               </Button>
               <span className="text-xs sm:text-sm text-parchment-300 font-medieval min-w-[60px] sm:min-w-[80px] text-center">
                 {page} / {totalPages}
@@ -540,7 +540,7 @@ export function SearchPage() {
                 disabled={page === totalPages}
                 className="h-9 sm:h-10 px-3 sm:px-4"
               >
-                <span className="hidden sm:inline">Suivant</span>
+                <span className="hidden sm:inline">Next</span>
                 <ChevronRight className="w-4 h-4 sm:ml-1" />
               </Button>
             </div>

@@ -82,14 +82,14 @@ export function DeckSuggestions({ deckId }: DeckSuggestionsProps) {
       queryClient.invalidateQueries({ queryKey: ['deck', deckId] })
       queryClient.invalidateQueries({ queryKey: ['deck-suggestions', deckId] })
       toast({
-        title: 'Carte ajoutée',
-        description: 'La carte a été ajoutée au deck.',
+        title: 'Card added',
+        description: 'Card has been added to the deck.',
       })
     },
     onError: () => {
       toast({
-        title: 'Erreur',
-        description: "Impossible d'ajouter la carte.",
+        title: 'Error',
+        description: 'Failed to add card.',
         variant: 'destructive',
       })
     },
@@ -118,8 +118,8 @@ export function DeckSuggestions({ deckId }: DeckSuggestionsProps) {
       >
         <div className="flex items-center gap-2">
           <Lightbulb className="w-5 h-5 text-gold-400" />
-          <h3 className="font-medieval text-gold-400">Suggestions de cartes</h3>
-          <span className="text-xs text-parchment-500">(basées sur les synergies)</span>
+          <h3 className="font-medieval text-gold-400">Card suggestions</h3>
+          <span className="text-xs text-parchment-500">(based on synergies)</span>
         </div>
         {isExpanded ? (
           <ChevronUp className="w-5 h-5 text-parchment-400" />
@@ -144,7 +144,7 @@ export function DeckSuggestions({ deckId }: DeckSuggestionsProps) {
                 <div className="py-3 flex flex-wrap gap-2 text-xs border-b border-dungeon-700 mb-3">
                   {data.analysis.archetype && (
                     <div className="flex items-center gap-1">
-                      <span className="text-parchment-500">Archétype:</span>
+                      <span className="text-parchment-500">Archetype:</span>
                       <span className="px-2 py-0.5 bg-arcane-600/30 text-arcane-300 rounded font-medium">
                         {data.analysis.archetype}
                       </span>
@@ -167,23 +167,23 @@ export function DeckSuggestions({ deckId }: DeckSuggestionsProps) {
               {isLoading && (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-gold-400" />
-                  <span className="ml-2 text-parchment-400">Analyse des synergies...</span>
+                  <span className="ml-2 text-parchment-400">Analyzing synergies...</span>
                 </div>
               )}
 
               {/* Error state */}
               {error && (
                 <div className="text-center py-8 text-dragon-400">
-                  Erreur lors du chargement des suggestions
+                  Error loading suggestions
                 </div>
               )}
 
               {/* Empty state */}
               {data?.suggestions.length === 0 && !isLoading && (
                 <div className="text-center py-8 text-parchment-500">
-                  Pas assez de cartes pour générer des suggestions.
+                  Not enough cards to generate suggestions.
                   <br />
-                  Ajoute plus de cartes au deck.
+                  Add more cards to the deck.
                 </div>
               )}
 
@@ -241,7 +241,7 @@ export function DeckSuggestions({ deckId }: DeckSuggestionsProps) {
                           onClick={() => handleAddCard(card)}
                           disabled={addCardMutation.isPending}
                           className="absolute top-1 right-1 p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                          title="Ajouter au deck"
+                          title="Add to deck"
                         >
                           <Plus className="w-3 h-3" />
                         </button>

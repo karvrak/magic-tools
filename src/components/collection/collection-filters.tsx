@@ -158,7 +158,7 @@ const RARITY_CONFIG = {
 }
 
 const CONDITIONS = [
-  { code: 'all', name: 'Toutes' },
+  { code: 'all', name: 'All' },
   { code: 'nm', name: 'Near Mint' },
   { code: 'lp', name: 'Light Play' },
   { code: 'mp', name: 'Moderate Play' },
@@ -167,12 +167,12 @@ const CONDITIONS = [
 ]
 
 const SORT_OPTIONS = [
-  { value: 'date', label: 'Date ajout' },
-  { value: 'name', label: 'Nom' },
-  { value: 'price', label: 'Prix' },
+  { value: 'date', label: 'Date added' },
+  { value: 'name', label: 'Name' },
+  { value: 'price', label: 'Price' },
   { value: 'cmc', label: 'CMC' },
-  { value: 'rarity', label: 'Rareté' },
-  { value: 'set', label: 'Édition' },
+  { value: 'rarity', label: 'Rarity' },
+  { value: 'set', label: 'Set' },
 ]
 
 // Set Autocomplete
@@ -320,7 +320,7 @@ function SetAutocomplete({
           onChange={handleInputChange}
           onFocus={handleFocus}
           onKeyDown={handleKeyDown}
-          placeholder="Édition..."
+          placeholder="Set..."
           className="h-8 text-xs pr-8"
         />
         {isLoading ? (
@@ -410,7 +410,7 @@ export function CollectionFiltersPanel({
             type="text"
             value={localName}
             onChange={(e) => setLocalName(e.target.value)}
-            placeholder="Rechercher une carte..."
+            placeholder="Search for a card..."
             className="pl-9 h-9 text-sm"
           />
           {localName && (
@@ -463,7 +463,7 @@ export function CollectionFiltersPanel({
           className="h-9 gap-2"
         >
           <SlidersHorizontal className="w-4 h-4" />
-          <span>Filtres</span>
+          <span>Filters</span>
           {activeFilterCount > 0 && (
             <span className="px-1.5 py-0.5 rounded-full text-xs bg-arcane-500 text-white">
               {activeFilterCount}
@@ -480,7 +480,7 @@ export function CollectionFiltersPanel({
             className="h-9 text-dragon-400 hover:text-dragon-300"
           >
             <X className="w-4 h-4 mr-1" />
-            Effacer
+            Clear
           </Button>
         )}
       </div>
@@ -497,7 +497,7 @@ export function CollectionFiltersPanel({
           {/* Colors */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-parchment-400 font-medieval">Couleurs</span>
+              <span className="text-xs text-parchment-400 font-medieval">Colors</span>
               <Select
                 value={filters.colorMode}
                 onValueChange={(v) => onChange({ ...filters, colorMode: v as CollectionFilters['colorMode'] })}
@@ -506,9 +506,9 @@ export function CollectionFiltersPanel({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="include">Inclut</SelectItem>
-                  <SelectItem value="exact">Exactement</SelectItem>
-                  <SelectItem value="atMost">Au plus</SelectItem>
+                  <SelectItem value="include">Includes</SelectItem>
+                  <SelectItem value="exact">Exactly</SelectItem>
+                  <SelectItem value="atMost">At most</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -539,7 +539,7 @@ export function CollectionFiltersPanel({
 
           {/* Rarity */}
           <div>
-            <span className="text-xs text-parchment-400 font-medieval mb-2 block">Rareté</span>
+            <span className="text-xs text-parchment-400 font-medieval mb-2 block">Rarity</span>
             <div className="flex gap-2">
               {Object.entries(RARITY_CONFIG).map(([code, config]) => {
                 const Icon = config.icon
@@ -580,7 +580,7 @@ export function CollectionFiltersPanel({
 
             {/* Set */}
             <div>
-              <span className="text-xs text-parchment-400 font-medieval mb-1.5 block">Édition</span>
+              <span className="text-xs text-parchment-400 font-medieval mb-1.5 block">Set</span>
               <SetAutocomplete
                 value={filters.set}
                 onChange={(v) => onChange({ ...filters, set: v })}
@@ -619,7 +619,7 @@ export function CollectionFiltersPanel({
                 onValueChange={(v) => onChange({ ...filters, condition: v })}
               >
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Toutes" />
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
                   {CONDITIONS.map(c => (
@@ -635,9 +635,9 @@ export function CollectionFiltersPanel({
             <span className="text-xs text-parchment-400 font-medieval mb-1.5 block">Foil</span>
             <div className="flex gap-2">
               {[
-                { value: 'all', label: 'Tous' },
-                { value: 'true', label: 'Foil seulement', icon: Sparkles },
-                { value: 'false', label: 'Non-foil seulement' },
+                { value: 'all', label: 'All' },
+                { value: 'true', label: 'Foil only', icon: Sparkles },
+                { value: 'false', label: 'Non-foil only' },
               ].map(opt => (
                 <Button
                   key={opt.value}
