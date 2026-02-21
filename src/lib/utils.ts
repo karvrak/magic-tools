@@ -14,7 +14,7 @@ export function formatPrice(price: number | null | undefined, currency: 'EUR' | 
 }
 
 /**
- * Interface for price data (can come from Card or CardPrice)
+ * Interface for price data
  */
 export interface PriceData {
   eur?: number | null

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { updatePlayerSchema, deletePlayerParamsSchema } from '@/lib/validations'
+import { broadcastGameEvent } from '@/lib/game-room/event-emitter'
 
 // PATCH /api/sessions/[code]/player - Update a player's state
 export async function PATCH(
@@ -9,7 +11,14 @@ export async function PATCH(
   try {
     const { code } = await params
     const body = await request.json()
-    const { 
+    const parsed = updatePlayerSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+    const {
       playerId,
       life,
       manaPool,
@@ -21,16 +30,14 @@ export async function PATCH(
       exileCount,
       battlefieldCount,
       battlefieldCards,
+      graveyardCards,
+      exileCards,
       isEliminated,
       isReady,
-    } = body
-
-    if (!playerId) {
-      return NextResponse.json(
-        { error: 'Player ID is required' },
-        { status: 400 }
-      )
-    }
+      manaPoolColors,
+      handCards,
+      libraryCards,
+    } = parsed.data
 
     // Verify that the session exists
     const session = await prisma.gameSession.findUnique({
@@ -69,8 +76,13 @@ export async function PATCH(
     if (exileCount !== undefined) updates.exileCount = exileCount
     if (battlefieldCount !== undefined) updates.battlefieldCount = battlefieldCount
     if (battlefieldCards !== undefined) updates.battlefieldCards = battlefieldCards
+    if (graveyardCards !== undefined) updates.graveyardCards = graveyardCards
+    if (exileCards !== undefined) updates.exileCards = exileCards
     if (isEliminated !== undefined) updates.isEliminated = isEliminated
     if (isReady !== undefined) updates.isReady = isReady
+    if (manaPoolColors !== undefined) updates.manaPoolColors = manaPoolColors
+    if (handCards !== undefined) updates.handCards = handCards
+    if (libraryCards !== undefined) updates.libraryCards = libraryCards
 
     // Update the player
     const updatedPlayer = await prisma.gamePlayer.update({
@@ -84,7 +96,12 @@ export async function PATCH(
       include: { players: { orderBy: { playerOrder: 'asc' } } },
     })
 
-    return NextResponse.json({ 
+    broadcastGameEvent(code.toUpperCase(), {
+      type: 'player_update',
+      data: { playerId },
+    })
+
+    return NextResponse.json({
       session: updatedSession,
       player: updatedPlayer,
     })
@@ -105,14 +122,16 @@ export async function DELETE(
   try {
     const { code } = await params
     const { searchParams } = new URL(request.url)
-    const playerId = searchParams.get('playerId')
-
-    if (!playerId) {
+    const parsed = deletePlayerParamsSchema.safeParse({
+      playerId: searchParams.get('playerId'),
+    })
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Player ID is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { playerId } = parsed.data
 
     const session = await prisma.gameSession.findUnique({
       where: { code: code.toUpperCase() },
@@ -169,6 +188,11 @@ export async function DELETE(
     const updatedSession = await prisma.gameSession.findUnique({
       where: { id: session.id },
       include: { players: { orderBy: { playerOrder: 'asc' } } },
+    })
+
+    broadcastGameEvent(code.toUpperCase(), {
+      type: 'player_update',
+      data: { playerId, action: 'left' },
     })
 
     return NextResponse.json({ session: updatedSession })

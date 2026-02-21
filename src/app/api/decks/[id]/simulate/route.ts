@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { simulateDeckSchema } from '@/lib/validations'
 
 // ============================================
 // INTERFACES
@@ -781,11 +782,14 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    
+
     let advanced = false
     try {
       const body = await request.json()
-      advanced = body.advanced === true
+      const parsed = simulateDeckSchema.safeParse(body)
+      if (parsed.success) {
+        advanced = parsed.data.advanced
+      }
     } catch {
       // Default to basic mode
     }

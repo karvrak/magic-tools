@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { changeCardEditionSchema } from '@/lib/validations'
 
 // PATCH /api/decks/[id]/cards/edition - Change card edition in deck
 export async function PATCH(
@@ -9,14 +10,14 @@ export async function PATCH(
   try {
     const { id: deckId } = await params
     const body = await request.json()
-    const { currentCardId, newCardId, category = 'mainboard' } = body
-
-    if (!currentCardId || !newCardId) {
+    const parsed = changeCardEditionSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Current card ID and new card ID are required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { currentCardId, newCardId, category } = parsed.data
 
     if (currentCardId === newCardId) {
       return NextResponse.json(

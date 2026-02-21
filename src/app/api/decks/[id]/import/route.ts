@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { importDecklistSchema } from '@/lib/validations'
 
 interface ParsedLine {
   quantity: number
@@ -96,14 +97,14 @@ export async function POST(
   try {
     const { id: deckId } = await params
     const body = await request.json()
-    const { decklist } = body
-
-    if (!decklist || typeof decklist !== 'string') {
+    const parsed = importDecklistSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Decklist text is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { decklist } = parsed.data
 
     // Check if deck exists
     const deck = await prisma.deck.findUnique({ where: { id: deckId } })

@@ -8,9 +8,17 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'magicTools - Your MTG Companion',
-  description: 'Search cards, build decks, manage your wantlist. Powered by Scryfall.',
+  description: 'Search cards, build decks, manage your collection. Powered by Scryfall.',
+  manifest: '/manifest.json',
+  themeColor: '#D4AF37',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'magicTools',
+  },
   icons: {
     icon: '/favicon.ico',
+    apple: '/icons/icon-192x192.png',
   },
 }
 

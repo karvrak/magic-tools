@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Layers, Heart, Menu, X, LogOut, Scroll, Sparkles, HelpCircle, Swords, Zap, ChevronDown, Hammer, Check, Users, User, UsersRound, Archive, Package, ScrollText } from 'lucide-react'
+import { Search, Layers, Heart, Menu, X, LogOut, Scroll, Sparkles, HelpCircle, Swords, Zap, ChevronDown, Hammer, Check, Users, User, UsersRound, Archive, Package, ScrollText, TrendingUp, Printer } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,8 @@ const navItems = [
   { href: '/battle', label: 'Arena', icon: Swords, description: 'Life counter & battles' },
   { href: '/matches', label: 'History', icon: ScrollText, description: 'Match history & stats' },
   { href: '/collection', label: 'Collection', icon: Archive, description: 'Cards & wishlist' },
+  { href: '/proxy', label: 'Proxy', icon: Printer, description: 'Print proxy cards' },
+  { href: '/analytics', label: 'Analytics', icon: TrendingUp, description: 'Collection insights' },
   { href: '/help', label: 'Tome of Knowledge', icon: HelpCircle, description: 'Help & shortcuts' },
 ]
 

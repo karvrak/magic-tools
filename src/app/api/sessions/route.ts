@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createSessionSchema } from '@/lib/validations'
 
 // Generate a unique short code (6 characters)
 function generateCode(): string {
@@ -51,23 +52,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { 
-      name,
-      playerName, 
-      playerColor = '#D4AF37',
-      maxPlayers = 2, 
-      startingLife = 20,
-      format,
-      deckId,
-      deckName,
-    } = body
-
-    if (!playerName || typeof playerName !== 'string') {
+    const parsed = createSessionSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Player name is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const {
+      name,
+      playerName,
+      playerColor,
+      maxPlayers,
+      startingLife,
+      format,
+      deckId,
+      deckName,
+    } = parsed.data
 
     // Generate a unique code
     let code = generateCode()

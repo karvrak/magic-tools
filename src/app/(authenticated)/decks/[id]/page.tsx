@@ -27,6 +27,9 @@ import {
   MoreVertical,
   FlaskConical,
   Tag,
+  Share2,
+  Link2,
+  Link2Off,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -110,6 +113,9 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
   const [showEditModal, setShowEditModal] = useState(false)
   const [showCoverModal, setShowCoverModal] = useState(false)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareToken, setShareToken] = useState<string | null>(null)
+  const [shareLoading, setShareLoading] = useState(false)
   const [duplicateName, setDuplicateName] = useState('')
   const [editName, setEditName] = useState('')
   const [editFormat, setEditFormat] = useState('')
@@ -173,6 +179,53 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
         description: 'Could not export the deck. Please try again.',
         variant: 'destructive',
       })
+    }
+  }
+
+  // Share deck handlers
+  const handleShare = async () => {
+    setShareLoading(true)
+    try {
+      const response = await fetch(`/api/decks/${id}/share`, { method: 'POST' })
+      if (!response.ok) throw new Error('Failed to generate share link')
+      const { shareToken: token } = await response.json()
+      setShareToken(token)
+      setShowShareModal(true)
+    } catch {
+      toast({
+        title: 'Share Failed',
+        description: 'Could not generate share link.',
+        variant: 'destructive',
+      })
+    } finally {
+      setShareLoading(false)
+    }
+  }
+
+  const handleRevokeShare = async () => {
+    try {
+      await fetch(`/api/decks/${id}/share`, { method: 'DELETE' })
+      setShareToken(null)
+      setShowShareModal(false)
+      toast({ title: 'Share link revoked' })
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Could not revoke share link.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleCopyShareLink = () => {
+    if (!shareToken) return
+    const url = `${window.location.origin}/shared/${shareToken}`
+    navigator.clipboard.writeText(url)
+    toast({ title: 'Link copied to clipboard' })
+
+    // Try Web Share API on mobile
+    if (navigator.share) {
+      navigator.share({ title: `${data?.deck?.name || 'Deck'} - magicTools`, url }).catch(() => {})
     }
   }
 
@@ -582,6 +635,12 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               </Button>
             </Link>
 
+            {/* Share button */}
+            <Button variant="outline" onClick={handleShare} disabled={shareLoading}>
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+
             {/* Duplicate button */}
             <Button variant="outline" onClick={handleOpenDuplicateModal}>
               <Copy className="w-4 h-4 mr-2" />
@@ -626,6 +685,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             </Link>
             <Select onValueChange={(value) => {
               if (value === 'edit') handleOpenEditModal()
+              else if (value === 'share') handleShare()
               else if (value === 'duplicate') handleOpenDuplicateModal()
               else if (value === 'playtest') router.push(`/decks/${id}/playtest`)
               else if (value.startsWith('export-')) handleExport(value.replace('export-', ''))
@@ -648,6 +708,11 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                 <SelectItem value="edit">
                   <div className="flex items-center gap-2">
                     <Settings2 className="w-4 h-4" /> Edit
+                  </div>
+                </SelectItem>
+                <SelectItem value="share">
+                  <div className="flex items-center gap-2">
+                    <Share2 className="w-4 h-4" /> Share
                   </div>
                 </SelectItem>
                 <SelectItem value="duplicate">
@@ -1368,6 +1433,59 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               className="flex-1 sm:flex-none"
             >
               {duplicateDeckMutation.isPending ? 'Duplicating...' : 'Duplicate'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-gold-500" />
+              Share deck
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {shareToken ? (
+              <>
+                <p className="text-sm text-parchment-400">
+                  Anyone with this link can view your deck (read-only).
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/shared/${shareToken}`}
+                    className="text-sm font-mono"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <Button size="sm" onClick={handleCopyShareLink}>
+                    <Link2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-parchment-400">
+                Generating share link...
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            {shareToken && (
+              <Button
+                variant="destructive"
+                onClick={handleRevokeShare}
+                className="flex-1 sm:flex-none"
+              >
+                <Link2Off className="w-4 h-4 mr-2" />
+                Revoke
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setShowShareModal(false)} className="flex-1 sm:flex-none">
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

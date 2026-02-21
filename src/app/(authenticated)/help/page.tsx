@@ -29,6 +29,7 @@ import {
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/layout/page-transition'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/hooks/use-toast'
+import { SyncProgressBar } from '@/components/layout/sync-progress-bar'
 
 // Keyboard shortcuts configuration
 type Shortcut = {
@@ -414,6 +415,9 @@ export default function HelpPage() {
               </p>
             </div>
           </div>
+
+          {/* Sync Progress Bar */}
+          <SyncProgressBar isActive={syncing !== null} />
 
           <div className="p-3 rounded-lg bg-dungeon-900/50 border border-dungeon-700/30">
             <p className="text-xs text-parchment-500">

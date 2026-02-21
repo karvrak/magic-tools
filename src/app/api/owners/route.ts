@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { createOwnerSchema } from '@/lib/validations'
 
 // GET /api/owners - List all owners
 export async function GET() {
@@ -38,14 +39,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, color } = body
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    const parsed = createOwnerSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Owner name is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { name, color } = parsed.data
 
     // Check if owner already exists
     const existing = await prisma.owner.findUnique({

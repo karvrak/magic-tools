@@ -222,25 +222,25 @@ export function buildSearchQuery(filters: Partial<SearchFilters>): Prisma.CardWh
 
 /**
  * Build price filter conditions
- * Returns oracle IDs that match the price criteria
+ * Returns oracle IDs that match the price criteria, using Card.priceEur/priceUsd
  */
 export async function buildPriceFilter(
   prisma: any,
   filters: Partial<SearchFilters>
 ): Promise<string[] | null> {
-  const priceConditions: Prisma.CardPriceWhereInput[] = []
+  const priceConditions: Prisma.CardWhereInput[] = []
 
   // EUR price filters
   if (filters.priceMinEur !== null && filters.priceMinEur !== undefined) {
     priceConditions.push({
-      eur: {
+      priceEur: {
         gte: filters.priceMinEur,
       },
     })
   }
   if (filters.priceMaxEur !== null && filters.priceMaxEur !== undefined) {
     priceConditions.push({
-      eur: {
+      priceEur: {
         lte: filters.priceMaxEur,
       },
     })
@@ -249,14 +249,14 @@ export async function buildPriceFilter(
   // USD price filters
   if (filters.priceMinUsd !== null && filters.priceMinUsd !== undefined) {
     priceConditions.push({
-      usd: {
+      priceUsd: {
         gte: filters.priceMinUsd,
       },
     })
   }
   if (filters.priceMaxUsd !== null && filters.priceMaxUsd !== undefined) {
     priceConditions.push({
-      usd: {
+      priceUsd: {
         lte: filters.priceMaxUsd,
       },
     })
@@ -266,17 +266,18 @@ export async function buildPriceFilter(
     return null // No price filter needed
   }
 
-  // Get oracle IDs matching price criteria
-  const matchingPrices = await prisma.cardPrice.findMany({
+  // Get distinct oracle IDs matching price criteria from Card table
+  const matchingCards = await prisma.card.findMany({
     where: {
       AND: priceConditions,
     },
     select: {
       oracleId: true,
     },
+    distinct: ['oracleId'],
   })
 
-  return matchingPrices.map((p: { oracleId: string }) => p.oracleId)
+  return matchingCards.map((c: { oracleId: string }) => c.oracleId)
 }
 
 /**

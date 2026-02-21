@@ -6,6 +6,7 @@ import { RefreshCw, Database, DollarSign, Loader2, ChevronDown } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { toast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { SyncProgressBar } from '@/components/layout/sync-progress-bar'
 
 type SyncType = 'cards' | 'prices' | null
 
@@ -156,6 +157,9 @@ export function SyncButtons() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Progress bar - shown below the button while syncing */}
+      <SyncProgressBar isActive={syncing !== null} />
     </div>
   )
 }

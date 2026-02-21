@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyPassword, setAuthCookie } from '@/lib/auth'
+import { loginSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
   try {
-    const { password } = await request.json()
-
-    if (!password) {
+    const body = await request.json()
+    const parsed = loginSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Password required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { password } = parsed.data
 
     const isValid = await verifyPassword(password)
 

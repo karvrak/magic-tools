@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { addDeckCardSchema, updateDeckCardSchema, deleteDeckCardParamsSchema } from '@/lib/validations'
 
 // POST /api/decks/[id]/cards - Add card to deck
 export async function POST(
@@ -9,14 +10,14 @@ export async function POST(
   try {
     const { id: deckId } = await params
     const body = await request.json()
-    const { cardId, quantity = 1, category = 'mainboard' } = body
-
-    if (!cardId) {
+    const parsed = addDeckCardSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Card ID is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { cardId, quantity, category } = parsed.data
 
     // Check if card exists
     const card = await prisma.card.findUnique({ where: { id: cardId } })
@@ -79,14 +80,14 @@ export async function PATCH(
   try {
     const { id: deckId } = await params
     const body = await request.json()
-    const { cardId, quantity, category } = body
-
-    if (!cardId) {
+    const parsed = updateDeckCardSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Card ID is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { cardId, quantity, category } = parsed.data
 
     if (quantity <= 0) {
       // Remove card from deck if quantity is 0 or less
@@ -134,15 +135,17 @@ export async function DELETE(
   try {
     const { id: deckId } = await params
     const { searchParams } = new URL(request.url)
-    const cardId = searchParams.get('cardId')
-    const category = searchParams.get('category')
-
-    if (!cardId) {
+    const parsed = deleteDeckCardParamsSchema.safeParse({
+      cardId: searchParams.get('cardId'),
+      category: searchParams.get('category'),
+    })
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Card ID is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { cardId, category } = parsed.data
 
     await prisma.deckCard.deleteMany({
       where: {

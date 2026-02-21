@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { updateOwnerSchema } from '@/lib/validations'
 
 // DELETE /api/owners/[id] - Delete an owner (keeps associated decks)
 export async function DELETE(
@@ -52,7 +53,14 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, color, isDefault } = body
+    const parsed = updateOwnerSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+    const { name, color, isDefault } = parsed.data
 
     // If setting as default, unset other defaults first
     if (isDefault === true) {

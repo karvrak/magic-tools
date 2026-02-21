@@ -1,22 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { importMatchesSchema, deleteMatchesParamsSchema } from '@/lib/validations'
 
 // GET /api/matches - List all matches with optional filters
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const deckName = searchParams.get('deckName')?.trim()
+    const source = searchParams.get('source')?.trim()
     const limit = parseInt(searchParams.get('limit') || '100')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    const where = deckName
-      ? {
-          OR: [
-            { deck1Name: { contains: deckName, mode: 'insensitive' as const } },
-            { deck2Name: { contains: deckName, mode: 'insensitive' as const } },
-          ],
-        }
-      : {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {}
+
+    if (deckName) {
+      where.OR = [
+        { deck1Name: { contains: deckName, mode: 'insensitive' as const } },
+        { deck2Name: { contains: deckName, mode: 'insensitive' as const } },
+      ]
+    }
+
+    if (source) {
+      where.source = source
+    }
 
     const [matches, total] = await Promise.all([
       prisma.match.findMany({
@@ -46,14 +53,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { matches: matchesData } = body
-
-    if (!Array.isArray(matchesData) || matchesData.length === 0) {
+    const parsed = importMatchesSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'matches array is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { matches: matchesData } = parsed.data
 
     // Generate a batch ID for this import
     const importBatchId = `import_${Date.now()}`
@@ -127,8 +134,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Parse scores (0-2)
-      const score1 = parseInt(row.score1 ?? row['score 1'] ?? '0')
-      const score2 = parseInt(row.score2 ?? row['score 2'] ?? '0')
+      const score1 = parseInt(String(row.score1 ?? row['score 1'] ?? '0'))
+      const score2 = parseInt(String(row.score2 ?? row['score 2'] ?? '0'))
 
       if (isNaN(score1) || isNaN(score2) || score1 < 0 || score2 < 0) {
         errors.push({ row: rowNum, error: `Invalid scores: ${row.score1}, ${row.score2}` })
@@ -179,15 +186,18 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const batchId = searchParams.get('batchId')
-    const deleteAll = searchParams.get('all') === 'true'
-
-    if (!batchId && !deleteAll) {
+    const parsed = deleteMatchesParamsSchema.safeParse({
+      batchId: searchParams.get('batchId'),
+      all: searchParams.get('all'),
+    })
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Either batchId or all=true is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().formErrors },
         { status: 400 }
       )
     }
+    const batchId = parsed.data.batchId
+    const deleteAll = parsed.data.all === 'true'
 
     const where = batchId ? { importBatchId: batchId } : {}
     const result = await prisma.match.deleteMany({ where })

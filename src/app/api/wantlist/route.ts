@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getBestPrice } from '@/lib/utils'
+import { addWantlistItemSchema, updateWantlistItemSchema, deleteWantlistItemParamsSchema } from '@/lib/validations'
 
 // GET /api/wantlist - Get all wantlist items (optionally filtered by owner)
 export async function GET(request: NextRequest) {
@@ -20,19 +21,9 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Get oracle prices as fallback for cards without individual prices
-    const oracleIds = [...new Set(items.map((item) => item.card.oracleId))]
-    const oraclePrices = await prisma.cardPrice.findMany({
-      where: { oracleId: { in: oracleIds } },
-    })
-    const oraclePriceMap = new Map(oraclePrices.map((p) => [p.oracleId, p]))
-
     // Format items with prices - USE CARD-SPECIFIC PRICES (per illustration)
     const formattedItems = items.map((item) => {
       const card = item.card
-      const oraclePrice = oraclePriceMap.get(card.oracleId)
-
-      // Use card-specific prices if available, otherwise fallback to oracle price
       const hasCardPrice = card.priceEur !== null || card.priceUsd !== null
 
       const price = hasCardPrice
@@ -41,17 +32,8 @@ export async function GET(request: NextRequest) {
             eurFoil: card.priceEurFoil,
             usd: card.priceUsd,
             usdFoil: card.priceUsdFoil,
-            tix: oraclePrice?.tix ?? null,
           }
-        : oraclePrice
-          ? {
-              eur: oraclePrice.eur,
-              eurFoil: oraclePrice.eurFoil,
-              usd: oraclePrice.usd,
-              usdFoil: oraclePrice.usdFoil,
-              tix: oraclePrice.tix,
-            }
-          : null
+        : null
 
       return {
         id: item.id,
@@ -102,14 +84,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { cardId, quantity = 1, priority = 'medium', notes, ownerId } = body
-
-    if (!cardId) {
+    const parsed = addWantlistItemSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Card ID is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { cardId, quantity, priority, notes, ownerId } = parsed.data
 
     // Check if card exists
     const card = await prisma.card.findUnique({ where: { id: cardId } })
@@ -136,7 +118,7 @@ export async function POST(request: NextRequest) {
       where: {
         cardId_ownerId: {
           cardId,
-          ownerId: ownerId || null
+          ownerId: (ownerId ?? null) as string
         }
       },
     })
@@ -157,7 +139,7 @@ export async function POST(request: NextRequest) {
     const item = await prisma.wantlistItem.create({
       data: {
         cardId,
-        ownerId: ownerId || null,
+        ownerId: (ownerId ?? null) as string,
         quantity: Math.max(1, quantity),
         priority,
         notes: notes?.trim() || null,
@@ -179,14 +161,14 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, quantity, priority, notes, ownerId, isOrdered, isReceived } = body
-
-    if (!id) {
+    const parsed = updateWantlistItemSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Item ID is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { id, quantity, priority, notes, ownerId, isOrdered, isReceived } = parsed.data
 
     if (quantity !== undefined && quantity <= 0) {
       // Delete if quantity is 0
@@ -231,14 +213,16 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
+    const parsed = deleteWantlistItemParamsSchema.safeParse({
+      id: searchParams.get('id'),
+    })
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Item ID is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { id } = parsed.data
 
     await prisma.wantlistItem.delete({ where: { id } })
 

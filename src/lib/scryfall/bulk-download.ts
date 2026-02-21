@@ -368,17 +368,3 @@ export function transformCard(card: ScryfallCard): TransformedCard {
   }
 }
 
-/**
- * Transform Scryfall card to price format
- */
-export function transformPrice(card: ScryfallCard) {
-  return {
-    oracleId: card.oracle_id,
-    eur: card.prices?.eur ? parseFloat(card.prices.eur) : null,
-    eurFoil: card.prices?.eur_foil ? parseFloat(card.prices.eur_foil) : null,
-    usd: card.prices?.usd ? parseFloat(card.prices.usd) : null,
-    usdFoil: card.prices?.usd_foil ? parseFloat(card.prices.usd_foil) : null,
-    tix: card.prices?.tix ? parseFloat(card.prices.tix) : null,
-    updatedAt: new Date(),
-  }
-}

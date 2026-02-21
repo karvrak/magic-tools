@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { GAME_MODES, type GameMode, type CreateBattleInput } from '@/types/battle'
+import { GAME_MODES, type GameMode } from '@/types/battle'
+import { createBattleSchema } from '@/lib/validations'
 
 // GET /api/battles - List of battles (history)
 export async function GET(request: NextRequest) {
@@ -42,11 +43,18 @@ export async function GET(request: NextRequest) {
 // POST /api/battles - Create a new battle
 export async function POST(request: NextRequest) {
   try {
-    const body: CreateBattleInput = await request.json()
-    const { mode, players } = body
+    const body = await request.json()
+    const parsed = createBattleSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+    const { mode, players } = parsed.data
 
     // Mode validation
-    const modeConfig = GAME_MODES[mode]
+    const modeConfig = GAME_MODES[mode as GameMode]
     if (!modeConfig) {
       return NextResponse.json(
         { error: 'Invalid game mode' },
@@ -60,16 +68,6 @@ export async function POST(request: NextRequest) {
         { error: `Mode ${mode} requires exactly ${modeConfig.players} players` },
         { status: 400 }
       )
-    }
-
-    // Deck name validation
-    for (const player of players) {
-      if (!player.deckName || player.deckName.trim().length === 0) {
-        return NextResponse.json(
-          { error: 'All players must have a deck name' },
-          { status: 400 }
-        )
-      }
     }
 
     // Create decks "on the fly" if needed

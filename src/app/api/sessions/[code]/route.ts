@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { joinSessionSchema, updateSessionSchema } from '@/lib/validations'
+import { broadcastGameEvent } from '@/lib/game-room/event-emitter'
 
 // GET /api/sessions/[code] - Get the session state
 export async function GET(
@@ -43,19 +45,14 @@ export async function POST(
   try {
     const { code } = await params
     const body = await request.json()
-    const { 
-      playerName, 
-      playerColor = '#3B82F6',
-      deckId,
-      deckName,
-    } = body
-
-    if (!playerName || typeof playerName !== 'string') {
+    const parsed = joinSessionSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Player name is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { playerName, playerColor, deckId, deckName } = parsed.data
 
     const session = await prisma.gameSession.findUnique({
       where: { code: code.toUpperCase() },
@@ -129,7 +126,12 @@ export async function POST(
       include: { players: { orderBy: { playerOrder: 'asc' } } },
     })
 
-    return NextResponse.json({ 
+    broadcastGameEvent(code.toUpperCase(), {
+      type: 'player_update',
+      data: { playerId: player.id, action: 'joined' },
+    })
+
+    return NextResponse.json({
       session: updatedSession,
       player,
       reconnected: false,
@@ -151,7 +153,14 @@ export async function PATCH(
   try {
     const { code } = await params
     const body = await request.json()
-    const { action, playerId, ...updates } = body
+    const parsed = updateSessionSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+    const { action, playerId, ...updates } = parsed.data
 
     const session = await prisma.gameSession.findUnique({
       where: { code: code.toUpperCase() },
@@ -185,6 +194,11 @@ export async function PATCH(
         include: { players: { orderBy: { playerOrder: 'asc' } } },
       })
 
+      broadcastGameEvent(code.toUpperCase(), {
+        type: 'game_start',
+        data: { session: updatedSession },
+      })
+
       return NextResponse.json({ session: updatedSession })
     }
 
@@ -202,6 +216,10 @@ export async function PATCH(
             finishedAt: new Date(),
           },
           include: { players: { orderBy: { playerOrder: 'asc' } } },
+        })
+        broadcastGameEvent(code.toUpperCase(), {
+          type: 'game_end',
+          data: { session: updatedSession, winner },
         })
         return NextResponse.json({ session: updatedSession, winner })
       }
@@ -222,7 +240,61 @@ export async function PATCH(
         include: { players: { orderBy: { playerOrder: 'asc' } } },
       })
 
+      broadcastGameEvent(code.toUpperCase(), {
+        type: 'state_update',
+        data: { action: 'nextTurn' },
+      })
+
       return NextResponse.json({ session: updatedSession })
+    }
+
+    if (action === 'advancePhase') {
+      const { phase } = parsed.data as { phase?: string }
+      if (!phase) {
+        return NextResponse.json(
+          { error: 'Phase is required for advancePhase action' },
+          { status: 400 }
+        )
+      }
+
+      const updatedSession = await prisma.gameSession.update({
+        where: { id: session.id },
+        data: { currentPhase: phase },
+        include: { players: { orderBy: { playerOrder: 'asc' } } },
+      })
+
+      broadcastGameEvent(code.toUpperCase(), {
+        type: 'state_update',
+        data: { action: 'advancePhase', phase },
+      })
+
+      return NextResponse.json({ session: updatedSession })
+    }
+
+    if (action === 'respond') {
+      broadcastGameEvent(code.toUpperCase(), {
+        type: 'response_alert',
+        data: {
+          playerId,
+          responds: parsed.data.responds ?? false,
+          playerName: parsed.data.playerName,
+          playerColor: parsed.data.playerColor,
+        },
+      })
+      return NextResponse.json({ success: true })
+    }
+
+    if (action === 'emote') {
+      broadcastGameEvent(code.toUpperCase(), {
+        type: 'emote',
+        data: {
+          playerId,
+          emoteId: parsed.data.emoteId,
+          playerName: parsed.data.playerName,
+          playerColor: parsed.data.playerColor,
+        },
+      })
+      return NextResponse.json({ success: true })
     }
 
     if (action === 'finish') {
@@ -235,6 +307,101 @@ export async function PATCH(
         include: { players: { orderBy: { playerOrder: 'asc' } } },
       })
 
+      broadcastGameEvent(code.toUpperCase(), {
+        type: 'game_end',
+        data: { session: updatedSession },
+      })
+
+      // Auto-create Match record from session data
+      try {
+        const players = updatedSession.players
+        if (players.length === 2) {
+          // 1v1 session: create a single Match
+          const p1 = players[0]
+          const p2 = players[1]
+
+          // Determine scores: survivor wins 2-0, or compare life totals
+          let score1 = 0
+          let score2 = 0
+          if (p1.isEliminated && !p2.isEliminated) {
+            score1 = 0
+            score2 = 2
+          } else if (p2.isEliminated && !p1.isEliminated) {
+            score1 = 2
+            score2 = 0
+          } else if (p1.life > p2.life) {
+            score1 = 2
+            score2 = 1
+          } else if (p2.life > p1.life) {
+            score1 = 1
+            score2 = 2
+          } else {
+            score1 = 1
+            score2 = 1
+          }
+
+          await prisma.match.create({
+            data: {
+              playedAt: updatedSession.startedAt ?? new Date(),
+              deck1Name: p1.deckName ?? p1.name,
+              deck1Id: p1.deckId ?? null,
+              score1,
+              deck2Name: p2.deckName ?? p2.name,
+              deck2Id: p2.deckId ?? null,
+              score2,
+              format: updatedSession.format ?? null,
+              source: 'online',
+              sessionId: updatedSession.id,
+            },
+          })
+        } else if (players.length >= 3) {
+          // Multiplayer: create a match for each unique pair
+          for (let i = 0; i < players.length; i++) {
+            for (let j = i + 1; j < players.length; j++) {
+              const pA = players[i]
+              const pB = players[j]
+
+              let scoreA = 0
+              let scoreB = 0
+              if (pA.isEliminated && !pB.isEliminated) {
+                scoreA = 0
+                scoreB = 2
+              } else if (pB.isEliminated && !pA.isEliminated) {
+                scoreA = 2
+                scoreB = 0
+              } else if (pA.life > pB.life) {
+                scoreA = 2
+                scoreB = 1
+              } else if (pB.life > pA.life) {
+                scoreA = 1
+                scoreB = 2
+              } else {
+                scoreA = 1
+                scoreB = 1
+              }
+
+              await prisma.match.create({
+                data: {
+                  playedAt: updatedSession.startedAt ?? new Date(),
+                  deck1Name: pA.deckName ?? pA.name,
+                  deck1Id: pA.deckId ?? null,
+                  score1: scoreA,
+                  deck2Name: pB.deckName ?? pB.name,
+                  deck2Id: pB.deckId ?? null,
+                  score2: scoreB,
+                  format: updatedSession.format ?? null,
+                  source: 'online',
+                  sessionId: updatedSession.id,
+                },
+              })
+            }
+          }
+        }
+      } catch (matchError) {
+        // Match creation failure should not block session finish
+        console.error('Failed to auto-create match from session:', matchError)
+      }
+
       return NextResponse.json({ session: updatedSession })
     }
 
@@ -243,6 +410,11 @@ export async function PATCH(
       where: { id: session.id },
       data: updates,
       include: { players: { orderBy: { playerOrder: 'asc' } } },
+    })
+
+    broadcastGameEvent(code.toUpperCase(), {
+      type: 'state_update',
+      data: { session: updatedSession },
     })
 
     return NextResponse.json({ session: updatedSession })

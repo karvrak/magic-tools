@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { GAME_MODES, type BattleResult } from '@/types/battle'
-
-interface FinishBattleInput {
-  players: {
-    id: string
-    finalLife: number
-    victoryPoints: number
-    isEliminated: boolean
-    commanderDamage: Record<string, number>
-  }[]
-}
+import { finishBattleSchema } from '@/lib/validations'
 
 // POST /api/battles/[id]/finish - Finish a battle and record the results
 export async function POST(
@@ -19,7 +10,14 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const body: FinishBattleInput = await request.json()
+    const body = await request.json()
+    const parsed = finishBattleSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
 
     // Retrieve the battle
     const battle = await prisma.battle.findUnique({
@@ -48,7 +46,7 @@ export async function POST(
     const modeConfig = GAME_MODES[battle.mode]
 
     // Update each player
-    for (const playerUpdate of body.players) {
+    for (const playerUpdate of parsed.data.players) {
       await prisma.battlePlayer.update({
         where: { id: playerUpdate.id },
         data: {
@@ -64,7 +62,7 @@ export async function POST(
     let winnerId: string | null = null
     let winnerTeam: number | null = null
 
-    const updatedPlayers = body.players.map((p) => {
+    const updatedPlayers = parsed.data.players.map((p) => {
       const original = battle.players.find((bp) => bp.id === p.id)!
       return {
         ...original,
@@ -147,6 +145,89 @@ export async function POST(
         },
       },
     })
+
+    // Auto-create Match record from battle data
+    try {
+      const battlePlayers = finishedBattle.players
+      if (battlePlayers.length === 2 && !modeConfig.hasTeams) {
+        // Classic 1v1: create a single Match
+        const p1 = battlePlayers[0]
+        const p2 = battlePlayers[1]
+
+        let score1 = 0
+        let score2 = 0
+        if (winnerId === p1.id) {
+          score1 = 2
+          score2 = 0
+        } else if (winnerId === p2.id) {
+          score1 = 0
+          score2 = 2
+        } else {
+          // Tie or no clear winner — compare life
+          score1 = p1.finalLife >= p2.finalLife ? 1 : 0
+          score2 = p2.finalLife >= p1.finalLife ? 1 : 0
+        }
+
+        await prisma.match.create({
+          data: {
+            playedAt: finishedBattle.startedAt ?? new Date(),
+            deck1Name: p1.deckName,
+            deck1Id: p1.deckId ?? null,
+            score1,
+            deck2Name: p2.deckName,
+            deck2Id: p2.deckId ?? null,
+            score2,
+            source: 'battle',
+            battleId: finishedBattle.id,
+          },
+        })
+      } else if (battlePlayers.length >= 3 && !modeConfig.hasTeams) {
+        // Multiplayer (FFA/Commander): create a match per unique pair
+        for (let i = 0; i < battlePlayers.length; i++) {
+          for (let j = i + 1; j < battlePlayers.length; j++) {
+            const pA = battlePlayers[i]
+            const pB = battlePlayers[j]
+
+            let scoreA = 0
+            let scoreB = 0
+            if (pA.isEliminated && !pB.isEliminated) {
+              scoreA = 0
+              scoreB = 2
+            } else if (pB.isEliminated && !pA.isEliminated) {
+              scoreA = 2
+              scoreB = 0
+            } else if (pA.finalLife > pB.finalLife) {
+              scoreA = 2
+              scoreB = 1
+            } else if (pB.finalLife > pA.finalLife) {
+              scoreA = 1
+              scoreB = 2
+            } else {
+              scoreA = 1
+              scoreB = 1
+            }
+
+            await prisma.match.create({
+              data: {
+                playedAt: finishedBattle.startedAt ?? new Date(),
+                deck1Name: pA.deckName,
+                deck1Id: pA.deckId ?? null,
+                score1: scoreA,
+                deck2Name: pB.deckName,
+                deck2Id: pB.deckId ?? null,
+                score2: scoreB,
+                source: 'battle',
+                battleId: finishedBattle.id,
+              },
+            })
+          }
+        }
+      }
+      // Team battles (2HG) are skipped for now — no clean 1v1 mapping
+    } catch (matchError) {
+      // Match creation failure should not block battle finish
+      console.error('Failed to auto-create match from battle:', matchError)
+    }
 
     // Build the result
     const result: BattleResult = {

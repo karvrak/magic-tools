@@ -1,12 +1,13 @@
 import cron from 'node-cron'
 import { syncAllCards } from './scryfall/sync-cards'
 import { syncPrices } from './scryfall/sync-prices'
+import { generateAllSnapshots } from './analytics/generate-snapshot'
 
 let cronInitialized = false
 
 /**
  * Initialize cron jobs for data synchronization
- * - Daily at 10:00 AM: Sync prices (oracle_cards ~80MB)
+ * - Daily at 10:00 AM: Sync prices (default_cards ~500MB, per-printing prices)
  * - Weekly on Sunday at 3:00 AM: Sync all cards (all_cards ~1.5GB)
  */
 export function initCronJobs() {
@@ -49,9 +50,23 @@ export function initCronJobs() {
     timezone: 'Europe/Paris'
   })
 
+  // Daily collection snapshot at 11:00 AM (after price sync at 10:00 AM)
+  cron.schedule('0 11 * * *', async () => {
+    console.log('[CRON] Starting daily collection snapshot...')
+    try {
+      const results = await generateAllSnapshots()
+      console.log(`[CRON] Collection snapshots generated: ${results.length} snapshots`)
+    } catch (error) {
+      console.error('[CRON] Collection snapshot error:', error)
+    }
+  }, {
+    timezone: 'Europe/Paris'
+  })
+
   cronInitialized = true
   console.log('[CRON] Jobs scheduled:')
   console.log('  - Prices: Daily at 10:00 AM (Europe/Paris)')
+  console.log('  - Snapshots: Daily at 11:00 AM (Europe/Paris)')
   console.log('  - Cards: Sunday at 3:00 AM (Europe/Paris)')
 }
 

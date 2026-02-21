@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { ScannerMatchRequest, ScannerMatchResponse, ScannerCard } from '@/types/scanner'
+import { ScannerMatchResponse, ScannerCard } from '@/types/scanner'
+import { scannerMatchSchema } from '@/lib/validations'
 
 /**
  * Normalize text for fuzzy matching
@@ -92,15 +93,15 @@ const cardSelect = {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body: ScannerMatchRequest = await request.json()
-    const { texts } = body
-
-    if (!texts || !Array.isArray(texts) || texts.length === 0) {
+    const body = await request.json()
+    const parsed = scannerMatchSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'texts array is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { texts } = parsed.data
 
     // Limit to 50 texts per request
     const limitedTexts = texts.slice(0, 50)

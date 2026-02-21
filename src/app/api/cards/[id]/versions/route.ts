@@ -82,7 +82,6 @@ export async function GET(
     }
 
     // Fallback: For versions without prices, try to get prices from EN version of same set
-    // or from CardPrice table as last resort
     const versionsWithoutPrices = finalVersions.filter(
       v => v.priceEur === null && v.priceUsd === null
     )
@@ -130,28 +129,6 @@ export async function GET(
         }
       }
 
-      // 2. Last resort: use CardPrice table (one price per oracleId)
-      // This applies the same reference price to all versions without individual prices
-      const stillWithoutPrices = finalVersions.filter(
-        v => v.priceEur === null && v.priceUsd === null
-      )
-
-      if (stillWithoutPrices.length > 0) {
-        const cardPrice = await prisma.cardPrice.findUnique({
-          where: { oracleId: card.oracleId },
-        })
-
-        if (cardPrice && (cardPrice.eur !== null || cardPrice.usd !== null)) {
-          for (const version of finalVersions) {
-            if (version.priceEur === null && version.priceUsd === null) {
-              version.priceEur = cardPrice.eur
-              version.priceUsd = cardPrice.usd
-              version.priceEurFoil = cardPrice.eurFoil
-              version.priceUsdFoil = cardPrice.usdFoil
-            }
-          }
-        }
-      }
     }
 
     // Compute which version is the "base" art (first booster, non-promo, normal frame)

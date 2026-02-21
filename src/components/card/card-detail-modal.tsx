@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Plus, Minus, Heart, Archive, ExternalLink, Loader2, Sparkles, Crown, Star, TrendingDown, TrendingUp, Coins, RotateCw, ChevronLeft, ChevronRight, Zap, ShoppingCart, PackageCheck, Trash2, ArrowRightCircle, Layers } from 'lucide-react'
+import { Plus, Minus, Heart, Archive, ExternalLink, Loader2, Sparkles, Crown, Star, TrendingDown, TrendingUp, Coins, RotateCw, ChevronLeft, ChevronRight, Zap, ShoppingCart, PackageCheck, Trash2, ArrowRightCircle, Layers, Printer } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AddToDeckModal } from './add-to-deck-modal'
 import { useQuickAdd } from '@/contexts/quick-add'
@@ -390,6 +390,43 @@ export function CardDetailModal({
       toast({
         title: 'Error',
         description: 'Failed to add to wantlist',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleAddToProxy = async () => {
+    const cardIdToAdd = selectedVersion?.id || card.id
+    const cardNameToShow = selectedVersion?.printedName || selectedVersion?.name || card.printedName || card.name
+
+    try {
+      const response = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardId: cardIdToAdd,
+          ownerId: activeOwner?.id || null,
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: 'Added to Proxy List',
+          description: `${cardNameToShow} (${displaySetCode.toUpperCase()}) has been added to your proxy list.`,
+          variant: 'default',
+        })
+      } else {
+        const data = await response.json()
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to add to proxy list',
+          variant: 'destructive',
+        })
+      }
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to add to proxy list',
         variant: 'destructive',
       })
     }
@@ -1211,6 +1248,10 @@ export function CardDetailModal({
                 <Button onClick={handleAddToWantlist} variant="secondary" className="h-8 sm:h-9 text-sm flex-1 sm:flex-none">
                   <Heart className="w-4 h-4 mr-1" />
                   <span className="hidden sm:inline">Wantlist</span>
+                </Button>
+                <Button onClick={handleAddToProxy} variant="secondary" className="h-8 sm:h-9 text-sm flex-1 sm:flex-none">
+                  <Printer className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Proxy</span>
                 </Button>
               </div>
               <div className="flex gap-2 justify-center sm:justify-start">

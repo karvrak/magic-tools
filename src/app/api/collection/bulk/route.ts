@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { CollectionBulkRequest, CollectionBulkResponse } from '@/types/scanner'
+import { CollectionBulkResponse } from '@/types/scanner'
+import { bulkCollectionSchema } from '@/lib/validations'
 
 /**
  * POST /api/collection/bulk - Add multiple items to collection
@@ -8,15 +9,15 @@ import { CollectionBulkRequest, CollectionBulkResponse } from '@/types/scanner'
  */
 export async function POST(request: NextRequest) {
   try {
-    const body: CollectionBulkRequest = await request.json()
-    const { items } = body
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    const body = await request.json()
+    const parsed = bulkCollectionSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'items array is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { items } = parsed.data
 
     // Limit to 100 items per request
     const limitedItems = items.slice(0, 100)
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
             await tx.collectionItem.create({
               data: {
                 cardId,
-                ownerId: ownerId || null,
+                ownerId: (ownerId ?? null) as string,
                 quantity,
                 condition,
                 isFoil,

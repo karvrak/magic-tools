@@ -6,14 +6,16 @@ export async function GET() {
   try {
     const [
       cardCount,
-      priceCount,
+      cardsWithPriceCount,
       deckCount,
       wantlistCount,
       lastCardSync,
       lastPriceSync,
     ] = await Promise.all([
       prisma.card.count(),
-      prisma.cardPrice.count(),
+      prisma.card.count({
+        where: { OR: [{ priceEur: { not: null } }, { priceUsd: { not: null } }] },
+      }),
       prisma.deck.count(),
       prisma.wantlistItem.count(),
       prisma.syncLog.findFirst({
@@ -21,7 +23,7 @@ export async function GET() {
         orderBy: { createdAt: 'desc' },
       }),
       prisma.syncLog.findFirst({
-        where: { type: 'oracle_cards', status: 'completed' },
+        where: { type: 'default_cards', status: 'completed' },
         orderBy: { createdAt: 'desc' },
       }),
     ])
@@ -32,7 +34,7 @@ export async function GET() {
         lastSync: lastCardSync?.createdAt || null,
       },
       prices: {
-        total: priceCount,
+        total: cardsWithPriceCount,
         lastSync: lastPriceSync?.createdAt || null,
       },
       decks: deckCount,

@@ -94,7 +94,8 @@ model Card {
   deckCards       DeckCard[]
   wantlistItems   WantlistItem[]
   collectionItems CollectionItem[]
-  
+  proxyItems      ProxyItem[]
+
   // Index pour performance
   @@index([oracleId])
   @@index([illustrationId])
@@ -110,30 +111,6 @@ model Card {
 }
 
 // ============================================
-// PRIX (mise a jour quotidienne via oracle_cards)
-// ============================================
-model CardPrice {
-  oracleId        String   @id // 1 prix par carte unique
-  
-  // Prix en EUR
-  eur             Float?
-  eurFoil         Float?
-  
-  // Prix en USD
-  usd             Float?
-  usdFoil         Float?
-  
-  // Prix MTGO (tix)
-  tix             Float?
-  
-  // Meta
-  updatedAt       DateTime @default(now())
-  
-  @@index([eur])
-  @@index([usd])
-}
-
-// ============================================
 // OWNERS (Propriétaires des decks)
 // ============================================
 model Owner {
@@ -142,9 +119,11 @@ model Owner {
   color       String   @default("#D4AF37") // Couleur d'affichage (gold par défaut)
   isDefault   Boolean  @default(false)     // Propriétaire par défaut pour nouveaux decks
 
-  decks           Deck[]
-  wantlistItems   WantlistItem[]
-  collectionItems CollectionItem[]
+  decks               Deck[]
+  wantlistItems       WantlistItem[]
+  collectionItems     CollectionItem[]
+  proxyItems          ProxyItem[]
+  collectionSnapshots CollectionSnapshot[]
 
   createdAt   DateTime @default(now())
 }
@@ -185,9 +164,12 @@ model Deck {
   ownerId     String?
   owner       Owner?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   
+  // Partage public read-only
+  shareToken  String?    @unique
+
   // Tags pour catégoriser le deck
   tags        Tag[]      // Relation many-to-many
-  
+
   cards       DeckCard[]
   battlePlayers BattlePlayer[]
 
@@ -200,6 +182,7 @@ model Deck {
 
   @@index([ownerId])
   @@index([status])
+  @@index([shareToken])
 }
 
 model DeckCard {
@@ -277,11 +260,27 @@ model CollectionItem {
 }
 
 // ============================================
+// PROXY (Proxy print list)
+// ============================================
+model ProxyItem {
+  id        String   @id @default(cuid())
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id])
+  ownerId   String?
+  owner     Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([cardId, ownerId])
+  @@index([ownerId])
+}
+
+// ============================================
 // LOGS DE SYNC
 // ============================================
 model SyncLog {
   id               String   @id @default(cuid())
-  type             String   // "all_cards" | "oracle_cards"
+  type             String   // "all_cards" | "default_cards"
   status           String   // "started" | "completed" | "failed"
 
   recordsProcessed Int?
@@ -404,7 +403,8 @@ model GameSession {
   status          GameSessionStatus @default(waiting)
   currentTurn     Int               @default(0)    // Tour actuel (0 = pas commencé)
   activePlayerId  String?           // ID du joueur dont c'est le tour
-  
+  currentPhase    String?           // Phase MTG actuelle (untap, upkeep, draw, main1, etc.)
+
   // Joueurs
   players         GamePlayer[]
   
@@ -439,6 +439,13 @@ model GamePlayer {
   manaPool        Int          @default(0)
   poisonCounters  Int          @default(0)
   commanderDamage Json         @default("{}") // { "playerId": damage }
+
+  // Colored mana pool
+  manaPoolColors  Json         @default("{\"W\":0,\"U\":0,\"B\":0,\"R\":0,\"G\":0,\"C\":0}")
+
+  // Private state (for reconnection only, never sent to other players)
+  handCards       Json?        // [{id, name}] - for reconnection
+  libraryCards    Json?        // [{id, name}] - for reconnection
   
   // Zones (stockées en JSON pour simplicité)
   handCount       Int          @default(0)    // Nombre de cartes en main
@@ -447,6 +454,8 @@ model GamePlayer {
   exileCount      Int          @default(0)    // Cartes en exil
   battlefieldCount Int         @default(0)    // Permanents en jeu
   battlefieldCards Json        @default("[]") // Cartes visibles sur le battlefield [{id, name, image, type, tapped}]
+  graveyardCards  Json        @default("[]") // Cartes au cimetière [{name, image, type}]
+  exileCards      Json        @default("[]") // Cartes en exil [{name, image, type}]
   
   // Status
   isConnected     Boolean      @default(true)
@@ -493,12 +502,18 @@ model Match {
   importBatchId   String?   // Pour grouper les imports
   importedAt      DateTime  @default(now())
 
+  // Source tracking
+  source          String    @default("import")  // "import" | "online" | "battle"
+  sessionId       String?   // Link to GameSession if source=online
+  battleId        String?   // Link to Battle if source=battle
+
   @@index([playedAt])
   @@index([deck1Name])
   @@index([deck2Name])
   @@index([deck1Id])
   @@index([deck2Id])
   @@index([importBatchId])
+  @@index([source])
 }
 
 // ============================================
@@ -577,4 +592,24 @@ model DeckSimulation {
   
   @@index([deckId])
   @@index([createdAt])
+}
+
+// ============================================
+// COLLECTION SNAPSHOTS (Analytics)
+// ============================================
+model CollectionSnapshot {
+  id              String   @id @default(cuid())
+
+  ownerId         String?
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  date            DateTime @db.Date
+  totalValue      Float    @default(0)
+  totalCards      Int      @default(0)
+  rarityBreakdown Json     @default("{}")
+
+  createdAt       DateTime @default(now())
+
+  @@unique([ownerId, date])
+  @@index([date])
 }

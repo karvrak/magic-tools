@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getBestPrice } from '@/lib/utils'
+import { addCollectionItemSchema, updateCollectionItemSchema, deleteCollectionItemParamsSchema } from '@/lib/validations'
 
 // Minimal card fields needed for collection display
 const cardSelect = {
@@ -262,15 +263,12 @@ export async function GET(request: NextRequest) {
               END *
               COALESCE(
                 CASE WHEN ci."isFoil" THEN c."priceEurFoil" ELSE c."priceEur" END,
-                CASE WHEN ci."isFoil" THEN cp."eurFoil" ELSE cp.eur END,
                 CASE WHEN ci."isFoil" THEN c."priceUsdFoil" * 0.92 ELSE c."priceUsd" * 0.92 END,
-                CASE WHEN ci."isFoil" THEN cp."usdFoil" * 0.92 ELSE cp.usd * 0.92 END,
                 0
               )
             ), 0) as total
             FROM "CollectionItem" ci
             JOIN "Card" c ON ci."cardId" = c.id
-            LEFT JOIN "CardPrice" cp ON c."oracleId" = cp."oracleId"
             WHERE 1=1 ${ownerFilter}
           `)
         : Promise.resolve([{ total: 0 }]),
@@ -280,15 +278,12 @@ export async function GET(request: NextRequest) {
               wi.quantity *
               COALESCE(
                 c."priceEur",
-                cp.eur,
                 c."priceUsd" * 0.92,
-                cp.usd * 0.92,
                 0
               )
             ), 0) as total
             FROM "WantlistItem" wi
             JOIN "Card" c ON wi."cardId" = c.id
-            LEFT JOIN "CardPrice" cp ON c."oracleId" = cp."oracleId"
             WHERE 1=1 ${ownerFilterWant}
           `)
         : Promise.resolve([{ total: 0 }]),
@@ -300,14 +295,6 @@ export async function GET(request: NextRequest) {
     // Get oracle prices for cards without individual prices
     const allItems = [...collectionItems, ...wantlistItems]
     const cardIds = [...new Set(allItems.map((item) => item.cardId))]
-
-    const oracleIdsNeedingPrice = [
-      ...new Set(
-        allItems
-          .filter((item) => item.card.priceEur === null && item.card.priceUsd === null)
-          .map((item) => item.card.oracleId)
-      ),
-    ]
 
     // Get decks containing these cards
     const deckCards = cardIds.length > 0 ? await prisma.deckCard.findMany({
@@ -340,31 +327,13 @@ export async function GET(request: NextRequest) {
       cardDecksMap.set(dc.cardId, existing)
     }
 
-    let oraclePriceMap = new Map<string, { eur: number | null; eurFoil: number | null; usd: number | null; usdFoil: number | null; tix: number | null }>()
-
-    if (oracleIdsNeedingPrice.length > 0) {
-      const oraclePrices = await prisma.cardPrice.findMany({
-        where: { oracleId: { in: oracleIdsNeedingPrice } },
-        select: {
-          oracleId: true,
-          eur: true,
-          eurFoil: true,
-          usd: true,
-          usdFoil: true,
-          tix: true,
-        },
-      })
-      oraclePriceMap = new Map(oraclePrices.map((p) => [p.oracleId, p]))
-    }
-
     // Format items for response
     const formattedItems = allItems.map((item) => {
       const card = item.card
       const isOwned = 'condition' in item
 
-      // Build price object
+      // Build price object from card-specific prices
       const hasCardPrice = card.priceEur !== null || card.priceUsd !== null
-      const oraclePrice = !hasCardPrice ? oraclePriceMap.get(card.oracleId) : null
 
       const price = hasCardPrice
         ? {
@@ -372,17 +341,8 @@ export async function GET(request: NextRequest) {
             eurFoil: card.priceEurFoil,
             usd: card.priceUsd,
             usdFoil: card.priceUsdFoil,
-            tix: null,
           }
-        : oraclePrice
-          ? {
-              eur: oraclePrice.eur,
-              eurFoil: oraclePrice.eurFoil,
-              usd: oraclePrice.usd,
-              usdFoil: oraclePrice.usdFoil,
-              tix: oraclePrice.tix,
-            }
-          : null
+        : null
 
       const isFoil = isOwned ? (item as typeof collectionItems[0]).isFoil : false
 
@@ -440,26 +400,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { cardId, quantity = 1, condition = 'nm', isFoil = false, notes, ownerId } = body
-
-    if (!cardId) {
-      return NextResponse.json({ error: 'Card ID is required' }, { status: 400 })
-    }
-
-    const validConditions = ['nm', 'lp', 'mp', 'hp', 'dmg']
-    if (!validConditions.includes(condition)) {
+    const parsed = addCollectionItemSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid condition. Must be one of: nm, lp, mp, hp, dmg' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { cardId, quantity, condition, isFoil, notes, ownerId } = parsed.data
 
     // Check card exists and upsert in one query using unique constraint
     const existing = await prisma.collectionItem.findUnique({
       where: {
         cardId_ownerId_isFoil_condition: {
           cardId,
-          ownerId: ownerId || null,
+          ownerId: (ownerId ?? null) as string,
           isFoil,
           condition,
         },
@@ -484,7 +439,7 @@ export async function POST(request: NextRequest) {
     const item = await prisma.collectionItem.create({
       data: {
         cardId,
-        ownerId: ownerId || null,
+        ownerId: (ownerId ?? null) as string,
         quantity: Math.max(1, quantity),
         condition,
         isFoil,
@@ -510,21 +465,14 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, quantity, condition, isFoil, notes, ownerId } = body
-
-    if (!id) {
-      return NextResponse.json({ error: 'Item ID is required' }, { status: 400 })
+    const parsed = updateCollectionItemSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
     }
-
-    if (condition !== undefined) {
-      const validConditions = ['nm', 'lp', 'mp', 'hp', 'dmg']
-      if (!validConditions.includes(condition)) {
-        return NextResponse.json(
-          { error: 'Invalid condition. Must be one of: nm, lp, mp, hp, dmg' },
-          { status: 400 }
-        )
-      }
-    }
+    const { id, quantity, condition, isFoil, notes, ownerId } = parsed.data
 
     if (quantity !== undefined && quantity <= 0) {
       await prisma.collectionItem.delete({ where: { id } })
@@ -538,7 +486,7 @@ export async function PATCH(request: NextRequest) {
         ...(condition !== undefined && { condition }),
         ...(isFoil !== undefined && { isFoil }),
         ...(notes !== undefined && { notes: notes?.trim() || null }),
-        ...(ownerId !== undefined && { ownerId: ownerId || null }),
+        ...(ownerId !== undefined && { ownerId: (ownerId ?? null) as string }),
       },
       select: {
         id: true,
@@ -560,11 +508,16 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json({ error: 'Item ID is required' }, { status: 400 })
+    const parsed = deleteCollectionItemParamsSchema.safeParse({
+      id: searchParams.get('id'),
+    })
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
     }
+    const { id } = parsed.data
 
     await prisma.collectionItem.delete({ where: { id } })
 

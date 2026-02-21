@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getBestPrice } from '@/lib/utils'
+import { updateDeckSchema } from '@/lib/validations'
 
 // GET /api/decks/[id] - Get deck with all cards
 export async function GET(
@@ -41,14 +42,8 @@ export async function GET(
       return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
     }
 
-    // Get oracle prices as fallback for cards without individual prices
-    const oracleIds = [...new Set(deck.cards.map((c) => c.card.oracleId))]
-    const oraclePrices = await prisma.cardPrice.findMany({
-      where: { oracleId: { in: oracleIds } },
-    })
-    const oraclePriceMap = new Map(oraclePrices.map((p) => [p.oracleId, p]))
-
     // Fetch minimum prices per oracleId (cheapest version of each card)
+    const oracleIds = [...new Set(deck.cards.map((c) => c.card.oracleId))]
     const minPricesRaw = await prisma.card.groupBy({
       by: ['oracleId'],
       where: {
@@ -71,10 +66,8 @@ export async function GET(
     // Format cards with prices - USE CARD-SPECIFIC PRICES (per illustration)
     const cardsWithPrices = deck.cards.map((dc) => {
       const card = dc.card
-      const oraclePrice = oraclePriceMap.get(card.oracleId)
       const minPrice = minPriceMap.get(card.oracleId)
 
-      // Use card-specific prices if available, otherwise fallback to oracle price
       const hasCardPrice = card.priceEur !== null || card.priceUsd !== null
 
       const price = hasCardPrice
@@ -83,17 +76,8 @@ export async function GET(
             eurFoil: card.priceEurFoil,
             usd: card.priceUsd,
             usdFoil: card.priceUsdFoil,
-            tix: oraclePrice?.tix ?? null,
           }
-        : oraclePrice
-          ? {
-              eur: oraclePrice.eur,
-              eurFoil: oraclePrice.eurFoil,
-              usd: oraclePrice.usd,
-              usdFoil: oraclePrice.usdFoil,
-              tix: oraclePrice.tix,
-            }
-          : null
+        : null
 
       // Calculate min price in EUR for this card
       const minPriceEur = minPrice
@@ -127,27 +111,11 @@ export async function GET(
     // Calculate minimum total price (cheapest version of each card)
     const minTotalPrice = cardsWithPrices.reduce((sum, dc) => {
       const minPrice = minPriceMap.get(dc.card.oracleId)
-      const oraclePrice = oraclePriceMap.get(dc.card.oracleId)
 
-      // Use minimum price from all versions if available
       if (minPrice && (minPrice.eur !== null || minPrice.usd !== null)) {
         const priceEur = minPrice.eur !== null
           ? minPrice.eur
           : (minPrice.usd !== null ? minPrice.usd * 0.92 : 0)
-        return sum + priceEur * dc.quantity
-      }
-
-      // Fallback to oracle price if no minimum found
-      if (oraclePrice) {
-        const best = getBestPrice({
-          eur: oraclePrice.eur,
-          eurFoil: oraclePrice.eurFoil,
-          usd: oraclePrice.usd,
-          usdFoil: oraclePrice.usdFoil,
-        })
-        const priceEur = best
-          ? (best.currency === 'EUR' ? best.value : best.value * 0.92)
-          : 0
         return sum + priceEur * dc.quantity
       }
 
@@ -180,15 +148,14 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, description, format, coverImage, ownerId, status, tagIds, addTagId, removeTagId } = body
-
-    // Validate status if provided
-    if (status !== undefined && !['building', 'active', 'locked'].includes(status)) {
+    const parsed = updateDeckSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be: building, active, or locked' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { name, description, format, coverImage, ownerId, status, tagIds, addTagId, removeTagId } = parsed.data
 
     // Build tags update if provided
     let tagsUpdate = {}
@@ -222,7 +189,7 @@ export async function PATCH(
         ...(description !== undefined && { description: description?.trim() || null }),
         ...(format !== undefined && { format: format || null }),
         ...(coverImage !== undefined && { coverImage }),
-        ...(ownerId !== undefined && { ownerId: ownerId || null }),
+        ...(ownerId !== undefined && { ownerId: ownerId ?? null }),
         ...(status !== undefined && { status }),
         ...tagsUpdate,
       },

@@ -35,6 +35,39 @@ interface Match {
   score2: number
   notes: string | null
   importBatchId: string | null
+  source?: string
+}
+
+type SourceFilter = 'all' | 'import' | 'online' | 'battle'
+
+const SOURCE_TABS: { value: SourceFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'online', label: 'Online' },
+  { value: 'battle', label: 'In Person' },
+  { value: 'import', label: 'Imported' },
+]
+
+function SourceBadge({ source }: { source?: string }) {
+  switch (source) {
+    case 'online':
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
+          Online
+        </span>
+      )
+    case 'battle':
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-400">
+          In Person
+        </span>
+      )
+    default:
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-dungeon-700 text-parchment-500">
+          Imported
+        </span>
+      )
+  }
 }
 
 interface ImportResult {
@@ -50,15 +83,17 @@ export default function MatchesPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [page, setPage] = useState(0)
   const limit = 50
 
   // Fetch matches
   const { data, isLoading } = useQuery({
-    queryKey: ['matches', searchQuery, page],
+    queryKey: ['matches', searchQuery, sourceFilter, page],
     queryFn: async () => {
       const params = new URLSearchParams()
       if (searchQuery) params.set('deckName', searchQuery)
+      if (sourceFilter !== 'all') params.set('source', sourceFilter)
       params.set('limit', String(limit))
       params.set('offset', String(page * limit))
       const res = await fetch(`/api/matches?${params}`)
@@ -302,6 +337,26 @@ export default function MatchesPage() {
           </AnimatePresence>
         </div>
 
+        {/* Source Filter Tabs */}
+        <div className="flex items-center gap-1 mb-6 bg-dungeon-800/60 p-1 rounded-lg w-fit">
+          {SOURCE_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => {
+                setSourceFilter(tab.value)
+                setPage(0)
+              }}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                sourceFilter === tab.value
+                  ? 'bg-dungeon-600 text-parchment-200'
+                  : 'text-parchment-500 hover:text-parchment-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Search & Actions */}
         <div className="flex items-center gap-4 mb-6">
           <div className="relative flex-1 max-w-md">
@@ -409,6 +464,11 @@ export default function MatchesPage() {
                       ) : (
                         <span className="text-parchment-600 text-sm">Draw</span>
                       )}
+                    </div>
+
+                    {/* Source badge */}
+                    <div className="w-20 flex-shrink-0 text-right">
+                      <SourceBadge source={match.source} />
                     </div>
                   </div>
                 </motion.div>

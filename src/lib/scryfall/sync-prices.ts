@@ -1,12 +1,16 @@
 import prisma from '@/lib/prisma'
-import { downloadBulkData, streamJsonFile, transformPrice, cleanupTempFile } from './bulk-download'
+import { downloadBulkData, streamJsonFile, cleanupTempFile } from './bulk-download'
+import { startSync, updateSyncStatus, finishSync } from '@/lib/sync-status'
+import { ScryfallCard } from '@/types/scryfall'
+import { transferPricesEnToFr } from './transfer-prices'
 
 const BATCH_SIZE = 1000
 
 /**
- * Synchronize prices from Scryfall oracle_cards
- * oracle_cards is smaller (~80MB) and contains one entry per unique card
- * Perfect for price updates as we only need one price per oracle_id
+ * Synchronize prices from Scryfall default_cards
+ * default_cards contains one entry per printing (EN only), ~500MB
+ * Updates Card.priceEur/priceUsd/etc. directly on EN cards,
+ * then transfers prices to FR cards via transferPricesEnToFr()
  */
 export async function syncPrices(): Promise<{
   success: boolean
@@ -20,55 +24,101 @@ export async function syncPrices(): Promise<{
   // Create sync log entry
   const syncLog = await prisma.syncLog.create({
     data: {
-      type: 'oracle_cards',
+      type: 'default_cards',
       status: 'started',
     },
   })
 
   try {
-    console.log('[SYNC PRICES] Starting price synchronization...')
+    console.log('[SYNC PRICES] Starting price synchronization (default_cards)...')
+    startSync('prices')
+
+    updateSyncStatus({ phase: 'downloading', progress: 5, message: 'Downloading price data from Scryfall...' })
 
     // Download the bulk data file
-    const filePath = await downloadBulkData('oracle_cards')
+    const filePath = await downloadBulkData('default_cards')
 
-    // Track unique oracle IDs to avoid duplicates
-    const processedOracleIds = new Set<string>()
+    updateSyncStatus({ phase: 'processing', progress: 15, message: 'Processing prices...' })
 
-    // Process cards in batches from the file
+    // Collect price updates in batches, then execute raw SQL for speed
     for await (const batch of streamJsonFile(filePath, BATCH_SIZE)) {
-      const prices = batch
-        .filter((card) => {
-          // Only process each oracle_id once
-          if (processedOracleIds.has(card.oracle_id)) {
-            return false
-          }
-          processedOracleIds.add(card.oracle_id)
-          return true
+      // default_cards = one entry per printing, EN only, paper games
+      const updates: { id: string; priceEur: number | null; priceEurFoil: number | null; priceUsd: number | null; priceUsdFoil: number | null }[] = []
+
+      for (const card of batch) {
+        // Only process cards that have prices
+        const priceEur = card.prices?.eur ? parseFloat(card.prices.eur) : null
+        const priceEurFoil = card.prices?.eur_foil ? parseFloat(card.prices.eur_foil) : null
+        const priceUsd = card.prices?.usd ? parseFloat(card.prices.usd) : null
+        const priceUsdFoil = card.prices?.usd_foil ? parseFloat(card.prices.usd_foil) : null
+
+        if (priceEur === null && priceEurFoil === null && priceUsd === null && priceUsdFoil === null) {
+          continue
+        }
+
+        updates.push({
+          id: card.id,
+          priceEur,
+          priceEurFoil,
+          priceUsd,
+          priceUsdFoil,
         })
-        .map(transformPrice)
+      }
 
-      if (prices.length === 0) continue
+      if (updates.length === 0) continue
 
-      // Upsert prices in batch using transaction
-      await prisma.$transaction(
-        prices.map((price) =>
-          prisma.cardPrice.upsert({
-            where: { oracleId: price.oracleId },
-            create: price,
-            update: price,
-          })
-        )
+      // Batch update using raw SQL for performance
+      // Build a VALUES clause and use UPDATE FROM
+      const valuesClauses = updates.map((u, i) => {
+        const base = i * 5
+        return `($${base + 1}, $${base + 2}::double precision, $${base + 3}::double precision, $${base + 4}::double precision, $${base + 5}::double precision)`
+      })
+
+      const flatParams: (string | number | null)[] = []
+      for (const u of updates) {
+        flatParams.push(u.id, u.priceEur, u.priceEurFoil, u.priceUsd, u.priceUsdFoil)
+      }
+
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Card" AS c SET
+          "priceEur" = v.price_eur,
+          "priceEurFoil" = v.price_eur_foil,
+          "priceUsd" = v.price_usd,
+          "priceUsdFoil" = v.price_usd_foil
+        FROM (VALUES ${valuesClauses.join(',')}) AS v(id, price_eur, price_eur_foil, price_usd, price_usd_foil)
+        WHERE c.id = v.id`,
+        ...flatParams
       )
 
-      recordsProcessed += prices.length
-      
+      recordsProcessed += updates.length
+
       if (recordsProcessed % 10000 === 0) {
         console.log(`[SYNC PRICES] Processed ${recordsProcessed} prices...`)
       }
+
+      // Update progress: processing spans 15% to 75%
+      const ESTIMATED_TOTAL = 100_000
+      const processingProgress = Math.min(
+        15 + Math.round((recordsProcessed / ESTIMATED_TOTAL) * 60),
+        75
+      )
+      updateSyncStatus({
+        progress: processingProgress,
+        message: `Processing prices... ${recordsProcessed.toLocaleString()} updated`,
+        recordsProcessed,
+      })
     }
 
     // Cleanup temp file after successful sync
-    cleanupTempFile('oracle_cards')
+    cleanupTempFile('default_cards')
+
+    // Transfer prices from EN to FR cards
+    updateSyncStatus({ phase: 'processing', progress: 80, message: 'Transferring prices EN to FR...' })
+    console.log('[SYNC PRICES] Transferring prices from EN to FR...')
+    const transferred = await transferPricesEnToFr()
+    console.log(`[SYNC PRICES] Transferred prices to ${transferred} FR cards`)
+
+    updateSyncStatus({ progress: 95, message: 'Finalizing...' })
 
     const durationMs = Date.now() - startTime
 
@@ -82,6 +132,7 @@ export async function syncPrices(): Promise<{
       },
     })
 
+    finishSync(true, `Synchronized ${recordsProcessed.toLocaleString()} prices in ${Math.round(durationMs / 1000)}s`)
     console.log(`[SYNC PRICES] Completed! ${recordsProcessed} prices in ${Math.round(durationMs / 1000)}s`)
 
     return {
@@ -91,8 +142,8 @@ export async function syncPrices(): Promise<{
     }
   } catch (error) {
     // Cleanup temp file on error too
-    cleanupTempFile('oracle_cards')
-    
+    cleanupTempFile('default_cards')
+
     const durationMs = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
 
@@ -107,6 +158,7 @@ export async function syncPrices(): Promise<{
       },
     })
 
+    finishSync(false, `Sync failed: ${errorMessage}`)
     console.error('[SYNC PRICES] Failed:', errorMessage)
 
     return {
@@ -124,7 +176,7 @@ export async function syncPrices(): Promise<{
 export async function getLastPriceSync() {
   return prisma.syncLog.findFirst({
     where: {
-      type: 'oracle_cards',
+      type: 'default_cards',
       status: 'completed',
     },
     orderBy: {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { scannerOcrSchema } from '@/lib/validations'
 
 const XAI_API_KEY = process.env.XAI_API_KEY
 
@@ -16,14 +17,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { image } = body
-
-    if (!image) {
+    const parsed = scannerOcrSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'image is required (base64 data URL)' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { image } = parsed.data
 
     // Extract base64 data from data URL
     const base64Match = image.match(/^data:image\/\w+;base64,(.+)$/)

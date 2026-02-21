@@ -183,6 +183,20 @@ export function SimulationStats({ deckId, cardCount }: SimulationStatsProps) {
               </>
             )}
           </Button>
+
+          {simulateMutation.isPending && (
+            <div className="max-w-xs mx-auto mt-4">
+              <div className="h-2 bg-dungeon-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-arcane-500 rounded-full animate-indeterminate-progress"
+                  style={{ width: '40%' }}
+                />
+              </div>
+              <p className="text-[10px] text-parchment-600 mt-2 text-center">
+                Simulating 10,000 draws...
+              </p>
+            </div>
+          )}
         </div>
       </div>
     )

@@ -187,13 +187,12 @@ export interface CardWithPrice {
   priceUsdFoil?: number | null
   releasedAt?: Date | null
   syncedAt: Date
-  // Price from CardPrice table (fallback for oracle-level price)
+  // Resolved price (card-specific or reference from another version)
   price?: {
     eur: number | null
     eurFoil: number | null
     usd: number | null
     usdFoil: number | null
-    tix: number | null
   } | null
   // Search result metadata
   versionCount?: number           // Number of versions available for this card

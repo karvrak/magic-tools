@@ -357,12 +357,7 @@ async function handleDeduplicatedSearch(
     }]))
   }
 
-  // Also fetch CardPrice as ultimate fallback
   const oracleIds = [...new Set(cards.map((c) => c.oracleId))]
-  const oraclePrices = oracleIds.length > 0 ? await prisma.cardPrice.findMany({
-    where: { oracleId: { in: oracleIds } },
-  }) : []
-  const oraclePriceMap = new Map(oraclePrices.map((p) => [p.oracleId, p]))
 
   // Count versions for each card (to show in UI)
   const versionCountQuery = `
@@ -380,7 +375,6 @@ async function handleDeduplicatedSearch(
   // Build final response with prices
   const cardsWithPrices: (CardWithPrice & { versionCount: number; isReferencePrice: boolean })[] = cards.map((card) => {
     const referencePrice = referencePrices.get(card.oracleId)
-    const oraclePrice = oraclePriceMap.get(card.oracleId)
     const hasOwnPrice = card.priceEur !== null || card.priceUsd !== null
 
     // Determine the price to use
@@ -389,37 +383,22 @@ async function handleDeduplicatedSearch(
       eurFoil: number | null
       usd: number | null
       usdFoil: number | null
-      tix: number | null
     } | null = null
     let isReferencePrice = false
 
     if (hasOwnPrice) {
-      // Card has its own price
       finalPrice = {
         eur: card.priceEur,
         eurFoil: card.priceEurFoil,
         usd: card.priceUsd,
         usdFoil: card.priceUsdFoil,
-        tix: oraclePrice?.tix ?? null,
       }
     } else if (referencePrice && (referencePrice.eur !== null || referencePrice.usd !== null)) {
-      // Use price from another version
       finalPrice = {
         eur: referencePrice.eur,
         eurFoil: referencePrice.eurFoil,
         usd: referencePrice.usd,
         usdFoil: referencePrice.usdFoil,
-        tix: oraclePrice?.tix ?? null,
-      }
-      isReferencePrice = true
-    } else if (oraclePrice) {
-      // Fallback to CardPrice table
-      finalPrice = {
-        eur: oraclePrice.eur,
-        eurFoil: oraclePrice.eurFoil,
-        usd: oraclePrice.usd,
-        usdFoil: oraclePrice.usdFoil,
-        tix: oraclePrice.tix,
       }
       isReferencePrice = true
     }

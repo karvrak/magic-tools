@@ -17,7 +17,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import { MultiplayerPlaytest } from '@/components/deck/multiplayer-playtest'
+import { GameRoom } from '@/components/game-room/game-room'
+import { useGameSync, ConnectionStatus } from '@/hooks/game-room/use-game-sync'
 import { CardWithPrice } from '@/types/scryfall'
 
 interface DeckCard {
@@ -79,6 +80,22 @@ interface DeckDetail {
   cards: DeckCard[]
 }
 
+/** Small colored dot indicating the real-time connection method. */
+function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
+  const config: Record<ConnectionStatus, { color: string; label: string }> = {
+    sse: { color: 'bg-emerald-500', label: 'Live' },
+    polling: { color: 'bg-amber-500', label: 'Polling' },
+    disconnected: { color: 'bg-dragon-500', label: 'Disconnected' },
+  }
+  const { color, label } = config[status]
+  return (
+    <span className="inline-flex items-center gap-1" title={label}>
+      <span className={cn('w-2 h-2 rounded-full', color)} />
+      <span className="text-xs">{label}</span>
+    </span>
+  )
+}
+
 // Inner component that uses useSearchParams
 function GameSessionContent({ code }: { code: string }) {
   const router = useRouter()
@@ -89,7 +106,10 @@ function GameSessionContent({ code }: { code: string }) {
   const playerId = searchParams.get('playerId')
   const [copied, setCopied] = useState(false)
 
-  // Fetch session with polling
+  // SSE-based real-time sync with automatic polling fallback
+  const { connectionStatus } = useGameSync(code)
+
+  // Fetch session data — SSE triggers invalidation, no polling needed
   const { data: sessionData, isLoading: sessionLoading, error: sessionError } = useQuery<{ session: GameSession }>({
     queryKey: ['session', code],
     queryFn: async () => {
@@ -97,7 +117,6 @@ function GameSessionContent({ code }: { code: string }) {
       if (!response.ok) throw new Error('Session not found')
       return response.json()
     },
-    refetchInterval: 1000, // Poll every second for real-time updates
   })
 
   const session = sessionData?.session
@@ -331,8 +350,9 @@ function GameSessionContent({ code }: { code: string }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-medieval text-xl text-gold-400">{session.name}</h1>
-          <p className="text-sm text-parchment-500">
+          <p className="text-sm text-parchment-500 flex items-center gap-1.5">
             {session.startingLife} HP • {session.players.length} players
+            <ConnectionIndicator status={connectionStatus} />
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -356,7 +376,7 @@ function GameSessionContent({ code }: { code: string }) {
 
       {/* Multiplayer Playtest */}
       {playerId && (
-        <MultiplayerPlaytest
+        <GameRoom
           playerId={playerId}
           players={session.players}
           startingLife={session.startingLife}

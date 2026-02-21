@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getBestPrice } from '@/lib/utils'
+import { createDeckSchema } from '@/lib/validations'
 
 // Helper to compute deck's color identity from its cards
 // Uses intersection of spell colors and land colors to determine actual deck colors
@@ -130,18 +131,10 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Get all unique oracleIds for fallback price lookup
+    // Fetch minimum prices per oracleId (cheapest version of each card)
     const allOracleIds = [...new Set(
       decks.flatMap((deck) => deck.cards.map((c) => c.card.oracleId))
     )]
-
-    // Fetch oracle-level prices as fallback
-    const oraclePrices = await prisma.cardPrice.findMany({
-      where: { oracleId: { in: allOracleIds } },
-    })
-    const oraclePriceMap = new Map(oraclePrices.map((p) => [p.oracleId, p]))
-
-    // Fetch minimum prices per oracleId (cheapest version of each card)
     const minPricesRaw = await prisma.card.groupBy({
       by: ['oracleId'],
       where: {
@@ -166,30 +159,19 @@ export async function GET(request: NextRequest) {
       // Calculate deck's color identity
       const colors = computeDeckColors(deck.cards)
       
-      // Calculate total price for this deck - use card-specific prices when available
+      // Calculate total price for this deck - use card-specific prices
       const totalPrice = deck.cards.reduce((sum, dc) => {
         const card = dc.card
-        const oraclePrice = oraclePriceMap.get(card.oracleId)
-        
-        // Use card-specific prices if available, otherwise fallback to oracle price
-        const hasCardPrice = card.priceEur !== null || card.priceUsd !== null
-        
-        const priceData = hasCardPrice
+
+        const priceData = (card.priceEur !== null || card.priceUsd !== null)
           ? {
               eur: card.priceEur,
               eurFoil: card.priceEurFoil,
               usd: card.priceUsd,
               usdFoil: card.priceUsdFoil,
             }
-          : oraclePrice
-            ? {
-                eur: oraclePrice.eur,
-                eurFoil: oraclePrice.eurFoil,
-                usd: oraclePrice.usd,
-                usdFoil: oraclePrice.usdFoil,
-              }
-            : null
-        
+          : null
+
         const best = getBestPrice(priceData)
         // Convert USD to EUR approximation for total (rough estimate)
         const priceEur = best
@@ -202,27 +184,11 @@ export async function GET(request: NextRequest) {
       const minTotalPrice = deck.cards.reduce((sum, dc) => {
         const card = dc.card
         const minPrice = minPriceMap.get(card.oracleId)
-        const oraclePrice = oraclePriceMap.get(card.oracleId)
 
-        // Use minimum price from all versions if available
         if (minPrice && (minPrice.eur !== null || minPrice.usd !== null)) {
           const priceEur = minPrice.eur !== null
             ? minPrice.eur
             : (minPrice.usd !== null ? minPrice.usd * 0.92 : 0)
-          return sum + priceEur * dc.quantity
-        }
-
-        // Fallback to oracle price if no minimum found
-        if (oraclePrice) {
-          const best = getBestPrice({
-            eur: oraclePrice.eur,
-            eurFoil: oraclePrice.eurFoil,
-            usd: oraclePrice.usd,
-            usdFoil: oraclePrice.usdFoil,
-          })
-          const priceEur = best
-            ? (best.currency === 'EUR' ? best.value : best.value * 0.92)
-            : 0
           return sum + priceEur * dc.quantity
         }
 
@@ -293,22 +259,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, format, ownerId, status } = body
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    const parsed = createDeckSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Deck name is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
-
-    // Validate status if provided
-    if (status !== undefined && !['building', 'active', 'locked'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status. Must be: building, active, or locked' },
-        { status: 400 }
-      )
-    }
+    const { name, description, format, ownerId, status } = parsed.data
 
     // If no ownerId provided, use the default owner
     let finalOwnerId = ownerId

@@ -1,5 +1,7 @@
 import prisma from '@/lib/prisma'
 import { downloadBulkData, streamJsonFile, transformCard, cleanupTempFile, TransformedCard } from './bulk-download'
+import { startSync, updateSyncStatus, finishSync } from '@/lib/sync-status'
+import { transferPricesEnToFr } from './transfer-prices'
 
 const BATCH_SIZE = 100 // Small batches for memory efficiency
 
@@ -184,15 +186,28 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
 
   try {
     console.log('[SYNC CARDS] Starting sync (FR+EN only, SQL deduplication)...')
-    
+    startSync('cards')
+
     // Only clear if explicitly requested (destroys deck/wantlist data!)
     if (clearFirst) {
       await clearAllCards()
     }
 
+    updateSyncStatus({
+      phase: 'downloading',
+      progress: 5,
+      message: 'Downloading bulk data from Scryfall...',
+    })
+
     const filePath = await downloadBulkData('all_cards', true)
-    
+
     let totalParsed = 0
+
+    updateSyncStatus({
+      phase: 'processing',
+      progress: 10,
+      message: 'Processing cards...',
+    })
 
     console.log('[SYNC CARDS] Inserting FR and EN cards...')
     
@@ -241,6 +256,18 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
       if (totalParsed % 200000 === 0) {
         console.log(`[SYNC CARDS] Parsed ${totalParsed}, inserted ${recordsProcessed} cards (FR: ${langStats['fr'] || 0}, EN: ${langStats['en'] || 0}, new: ${totalNewCards} cards, ${totalNewArt} arts)`)
       }
+
+      // Update progress: processing phase spans from 10% to 70%
+      const ESTIMATED_TOTAL = 5_000_000
+      const processingProgress = Math.min(
+        10 + Math.round((totalParsed / ESTIMATED_TOTAL) * 60),
+        70
+      )
+      updateSyncStatus({
+        progress: processingProgress,
+        message: `Processing cards... ${recordsProcessed.toLocaleString()} inserted`,
+        recordsProcessed,
+      })
     }
 
     console.log(`[SYNC CARDS] Import complete: ${recordsProcessed} cards`)
@@ -249,31 +276,16 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
     
     // Phase 2: Transfer prices from EN to FR before deduplication
     // French cards on Scryfall don't have prices, only English versions do
+    updateSyncStatus({ phase: 'deduplicating', progress: 72, message: 'Transferring prices from EN to FR...' })
     console.log('[SYNC CARDS] Transferring prices from EN to FR versions...')
 
-    const priceTransferResult = await prisma.$executeRaw`
-      UPDATE "Card" fr
-      SET
-        "priceEur" = COALESCE(fr."priceEur", en."priceEur"),
-        "priceUsd" = COALESCE(fr."priceUsd", en."priceUsd"),
-        "priceEurFoil" = COALESCE(fr."priceEurFoil", en."priceEurFoil"),
-        "priceUsdFoil" = COALESCE(fr."priceUsdFoil", en."priceUsdFoil")
-      FROM "Card" en
-      WHERE fr.lang = 'fr'
-        AND en.lang = 'en'
-        AND (
-          (fr."illustrationId" IS NOT NULL AND fr."illustrationId" = en."illustrationId")
-          OR
-          (fr."illustrationId" IS NULL AND fr."oracleId" = en."oracleId" AND fr."setCode" = en."setCode" AND fr."collectorNumber" = en."collectorNumber")
-        )
-        AND (fr."priceEur" IS NULL OR fr."priceUsd" IS NULL)
-        AND (en."priceEur" IS NOT NULL OR en."priceUsd" IS NOT NULL)
-    `
+    const priceTransferResult = await transferPricesEnToFr()
 
     console.log(`[SYNC CARDS] Transferred prices to ${priceTransferResult} FR cards`)
 
     // Phase 3: Deduplicate using SQL - keep FR over EN for same illustration
     // IMPORTANT: Don't delete cards that are referenced in decks or wantlist!
+    updateSyncStatus({ progress: 78, message: 'Deduplicating cards (FR over EN)...' })
     console.log('[SYNC CARDS] Deduplicating: keeping FR over EN for same illustration...')
 
     const deleteResult = await prisma.$executeRaw`
@@ -297,6 +309,8 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
 
     cleanupTempFile('all_cards')
 
+    updateSyncStatus({ phase: 'finalizing', progress: 85, message: 'Counting final records...' })
+
     const finalCount = await prisma.card.count()
     const durationMs = Date.now() - startTime
 
@@ -308,6 +322,8 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
         durationMs,
       },
     })
+
+    updateSyncStatus({ progress: 90, message: 'Refreshing materialized views...' })
 
     // Refresh the card_type_words materialized view for autocomplete
     try {
@@ -337,6 +353,7 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
       console.warn('[SYNC CARDS] Could not refresh deck_card_names view:', viewError)
     }
 
+    finishSync(true, `Synchronized ${finalCount.toLocaleString()} cards in ${Math.round(durationMs / 1000)}s`)
     console.log(`[SYNC CARDS] Completed! ${finalCount} unique cards in ${Math.round(durationMs / 1000)}s (${totalNewCards} new cards, ${totalNewArt} new artworks)`)
 
     return {
@@ -364,6 +381,7 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
       },
     })
 
+    finishSync(false, `Sync failed: ${errorMessage}`)
     console.error('[SYNC CARDS] Failed:', errorMessage)
 
     return {

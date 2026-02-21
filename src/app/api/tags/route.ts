@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createTagSchema } from '@/lib/validations'
 
 // GET /api/tags - List all tags with deck count
 export async function GET() {
@@ -35,31 +36,17 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, color } = body
-
-    if (!name || typeof name !== 'string') {
+    const parsed = createTagSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Tag name is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { name, color } = parsed.data
 
     // Normalize the name (lowercase, trim)
     const normalizedName = name.toLowerCase().trim()
-
-    if (normalizedName.length === 0) {
-      return NextResponse.json(
-        { error: 'Tag name cannot be empty' },
-        { status: 400 }
-      )
-    }
-
-    if (normalizedName.length > 30) {
-      return NextResponse.json(
-        { error: 'Tag name must be 30 characters or less' },
-        { status: 400 }
-      )
-    }
 
     // Check if the tag already exists
     const existing = await prisma.tag.findUnique({
