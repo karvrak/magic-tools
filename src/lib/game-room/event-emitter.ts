@@ -10,7 +10,7 @@ const sessionListenerCounts = new Map<string, number>()
 // Cleanup interval - runs every 5 minutes to remove orphaned session events
 const CLEANUP_INTERVAL = 5 * 60 * 1000
 
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   // Remove sessions with no listeners
   for (const [sessionCode, count] of sessionListenerCounts.entries()) {
     if (count <= 0) {
@@ -19,6 +19,11 @@ setInterval(() => {
     }
   }
 }, CLEANUP_INTERVAL)
+
+// Allow Node.js to exit cleanly even if the interval is still active
+if (typeof cleanupInterval.unref === 'function') {
+  cleanupInterval.unref()
+}
 
 export type GameEvent = {
   type:
