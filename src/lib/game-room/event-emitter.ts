@@ -4,6 +4,22 @@ import { EventEmitter } from 'events'
 const gameEventEmitter = new EventEmitter()
 gameEventEmitter.setMaxListeners(100) // Allow many concurrent game sessions
 
+// Track active listeners per session for cleanup
+const sessionListenerCounts = new Map<string, number>()
+
+// Cleanup interval - runs every 5 minutes to remove orphaned session events
+const CLEANUP_INTERVAL = 5 * 60 * 1000
+
+setInterval(() => {
+  // Remove sessions with no listeners
+  for (const [sessionCode, count] of sessionListenerCounts.entries()) {
+    if (count <= 0) {
+      gameEventEmitter.removeAllListeners(`session:${sessionCode}`)
+      sessionListenerCounts.delete(sessionCode)
+    }
+  }
+}, CLEANUP_INTERVAL)
+
 export type GameEvent = {
   type:
     | 'state_update'
@@ -44,7 +60,39 @@ export function subscribeToSession(
   listener: (event: GameEvent) => void
 ) {
   gameEventEmitter.on(`session:${sessionCode}`, listener)
+
+  // Track listener count for cleanup
+  const currentCount = sessionListenerCounts.get(sessionCode) || 0
+  sessionListenerCounts.set(sessionCode, currentCount + 1)
+
   return () => {
     gameEventEmitter.off(`session:${sessionCode}`, listener)
+
+    // Decrement listener count
+    const count = sessionListenerCounts.get(sessionCode) || 0
+    if (count <= 1) {
+      sessionListenerCounts.delete(sessionCode)
+    } else {
+      sessionListenerCounts.set(sessionCode, count - 1)
+    }
   }
+}
+
+/**
+ * Get the number of active listeners across all sessions.
+ * Useful for monitoring/debugging memory usage.
+ */
+export function getActiveSessionCount(): number {
+  return sessionListenerCounts.size
+}
+
+/**
+ * Get the total number of listeners across all sessions.
+ */
+export function getTotalListenerCount(): number {
+  let total = 0
+  for (const count of sessionListenerCounts.values()) {
+    total += count
+  }
+  return total
 }

@@ -37,6 +37,9 @@ const DEFAULT_STATUS: SyncStatus = {
 /** Global mutable state - shared across all requests in the same process. */
 let currentStatus: SyncStatus = { ...DEFAULT_STATUS }
 
+/** Track the auto-reset timeout to prevent accumulation */
+let resetTimeout: ReturnType<typeof setTimeout> | null = null
+
 export function getSyncStatus(): SyncStatus {
   return { ...currentStatus }
 }
@@ -68,13 +71,20 @@ export function finishSync(success: boolean, message: string): void {
     message,
   }
 
+  // Clear any existing timeout to prevent accumulation
+  if (resetTimeout) {
+    clearTimeout(resetTimeout)
+    resetTimeout = null
+  }
+
   // Auto-reset to idle after 10 seconds so stale state doesn't persist
-  setTimeout(() => {
+  resetTimeout = setTimeout(() => {
     if (
       currentStatus.phase === 'done' ||
       currentStatus.phase === 'error'
     ) {
       resetSyncStatus()
     }
+    resetTimeout = null
   }, 10_000)
 }

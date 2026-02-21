@@ -11,9 +11,18 @@ services:
       - NODE_ENV=production
       - AUTH_PASSWORD=${AUTH_PASSWORD}
       - XAI_API_KEY=${XAI_API_KEY}
-      - NODE_OPTIONS=--max-old-space-size=4096
+      # Limit Node.js heap to 1.2GB - container will restart if exceeded
+      - NODE_OPTIONS=--max-old-space-size=1228
     ports:
       - "3000:3000"
+    # Memory limit - container restarts automatically if exceeded
+    # This prevents runaway memory leaks from crashing the host
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 512M
     # Uncomment and configure for Traefik reverse proxy:
     # networks:
     #   - traefik_web
