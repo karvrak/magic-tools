@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useCallback, useState } from 'react'
+import { useEffect, useMemo, useCallback, useState, useRef } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Maximize2, Minimize2 } from 'lucide-react'
@@ -103,6 +103,9 @@ export function GameRoom({
   // Whether we are still in mulligan
   const inMulliganScreen = gameInitialized && mulliganPhase !== 'done'
 
+  // Track which turn we've already auto-started (to avoid re-triggering)
+  const lastAutoStartedTurnRef = useRef<string | null>(null)
+
   // Keep onUpdateStats ref fresh
   onUpdateStatsRef.current = onUpdateStats
 
@@ -184,6 +187,34 @@ export function GameRoom({
     const timer = setTimeout(() => document.addEventListener('click', handleClick), 0)
     return () => { clearTimeout(timer); document.removeEventListener('click', handleClick) }
   }, [showDeckMenu, setShowDeckMenu])
+
+  // --- useEffect: Auto-start turn when it becomes our turn ---
+  useEffect(() => {
+    // Only auto-start if:
+    // 1. Game is playing (not lobby/finished)
+    // 2. Game is initialized
+    // 3. Mulligan is done
+    // 4. It's my turn
+    // 5. We haven't already auto-started this specific turn
+    // 6. It's not the first turn (turn 1, first player doesn't auto-draw on start)
+    if (
+      gamePhase === 'playing' &&
+      gameInitialized &&
+      !inMulliganScreen &&
+      isMyTurn &&
+      currentTurn > 0
+    ) {
+      const turnKey = `${currentTurn}-${activePlayerId}`
+      if (lastAutoStartedTurnRef.current !== turnKey) {
+        lastAutoStartedTurnRef.current = turnKey
+        // Small delay to ensure state is synced
+        const timer = setTimeout(() => {
+          actions.handleStartTurn()
+        }, 300)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [gamePhase, gameInitialized, inMulliganScreen, isMyTurn, currentTurn, activePlayerId, actions])
 
   // --- Prepare battlefield/graveyard/exile cards info for sync ---
   const battlefieldCardsInfo: BattlefieldCardInfo[] = useMemo(() => {
@@ -479,6 +510,7 @@ export function GameRoom({
             onSendToGraveyard={actions.sendToGraveyard}
             onBounceToHand={actions.bounceToHand}
             onExileFromBattlefield={actions.exileFromBattlefield}
+            onPutOnTopOfLibrary={actions.putOnTopOfLibrary}
             onAdjustCounter={actions.adjustCounter}
             onOpenGenericCounterPopup={actions.openGenericCounterPopup}
             onAdjustGenericCounter={actions.adjustGenericCounter}
@@ -496,6 +528,7 @@ export function GameRoom({
             onCloseGraveyard={() => setShowGraveyard(false)}
             onGraveyardToHand={actions.graveyardToHand}
             onGraveyardToBattlefield={actions.graveyardToBattlefield}
+            onGraveyardToLibraryTop={actions.graveyardToLibraryTop}
             showExile={showExile}
             exile={exile}
             onCloseExile={() => setShowExile(false)}

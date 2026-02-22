@@ -91,10 +91,39 @@ export async function PATCH(
     })
 
     // Retrieve the updated session
-    const updatedSession = await prisma.gameSession.findUnique({
+    let updatedSession = await prisma.gameSession.findUnique({
       where: { id: session.id },
       include: { players: { orderBy: { playerOrder: 'asc' } } },
     })
+
+    // Check if game should end (only one player remaining non-eliminated)
+    if (updatedSession && updatedSession.status === 'playing') {
+      const activePlayers = updatedSession.players.filter(p => !p.isEliminated)
+      if (activePlayers.length <= 1) {
+        // Game finished - one winner or no one left
+        updatedSession = await prisma.gameSession.update({
+          where: { id: session.id },
+          data: {
+            status: 'finished',
+            finishedAt: new Date(),
+          },
+          include: { players: { orderBy: { playerOrder: 'asc' } } },
+        })
+
+        // Broadcast game end event
+        broadcastGameEvent(code.toUpperCase(), {
+          type: 'game_end',
+          data: { session: updatedSession, winner: activePlayers[0] || null },
+        })
+
+        return NextResponse.json({
+          session: updatedSession,
+          player: updatedPlayer,
+          gameEnded: true,
+          winner: activePlayers[0] || null,
+        })
+      }
+    }
 
     broadcastGameEvent(code.toUpperCase(), {
       type: 'player_update',

@@ -48,12 +48,18 @@ export function TokenCreator({ isOpen, onClose, onCreateToken }: TokenCreatorPro
     })
   }
 
+  // Check if the selected type is a creature type (needs power/toughness)
+  const isCreatureType = customType.toLowerCase().includes('creature')
+
   const handleCreateCustom = () => {
-    if (!customName.trim() || !customPower.trim() || !customToughness.trim()) return
+    if (!customName.trim()) return
+    // Only require P/T for creature types
+    if (isCreatureType && (!customPower.trim() || !customToughness.trim())) return
+
     onCreateToken({
       name: customName.trim(),
-      power: customPower.trim(),
-      toughness: customToughness.trim(),
+      power: isCreatureType ? customPower.trim() : '',
+      toughness: isCreatureType ? customToughness.trim() : '',
       type: customType,
       color: customColor,
     })
@@ -132,24 +138,26 @@ export function TokenCreator({ isOpen, onClose, onCreateToken }: TokenCreatorPro
                   className="w-full px-3 py-2 bg-dungeon-900 border border-dungeon-600 rounded-lg text-parchment-200 placeholder-parchment-600 text-sm focus:outline-none focus:border-gold-500/50"
                 />
 
-                {/* Power / Toughness */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Power"
-                    value={customPower}
-                    onChange={(e) => setCustomPower(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-dungeon-900 border border-dungeon-600 rounded-lg text-parchment-200 placeholder-parchment-600 text-sm focus:outline-none focus:border-gold-500/50"
-                  />
-                  <span className="text-parchment-500 self-center text-lg">/</span>
-                  <input
-                    type="text"
-                    placeholder="Toughness"
-                    value={customToughness}
-                    onChange={(e) => setCustomToughness(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-dungeon-900 border border-dungeon-600 rounded-lg text-parchment-200 placeholder-parchment-600 text-sm focus:outline-none focus:border-gold-500/50"
-                  />
-                </div>
+                {/* Power / Toughness - only for creature types */}
+                {isCreatureType && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Power"
+                      value={customPower}
+                      onChange={(e) => setCustomPower(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-dungeon-900 border border-dungeon-600 rounded-lg text-parchment-200 placeholder-parchment-600 text-sm focus:outline-none focus:border-gold-500/50"
+                    />
+                    <span className="text-parchment-500 self-center text-lg">/</span>
+                    <input
+                      type="text"
+                      placeholder="Toughness"
+                      value={customToughness}
+                      onChange={(e) => setCustomToughness(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-dungeon-900 border border-dungeon-600 rounded-lg text-parchment-200 placeholder-parchment-600 text-sm focus:outline-none focus:border-gold-500/50"
+                    />
+                  </div>
+                )}
 
                 {/* Type dropdown */}
                 <select
@@ -162,6 +170,8 @@ export function TokenCreator({ isOpen, onClose, onCreateToken }: TokenCreatorPro
                   <option value="Enchantment Creature">Enchantment Creature</option>
                   <option value="Artifact">Artifact</option>
                   <option value="Enchantment">Enchantment</option>
+                  <option value="Land">Land</option>
+                  <option value="Basic Land">Basic Land</option>
                 </select>
 
                 {/* Color selector */}
@@ -190,7 +200,7 @@ export function TokenCreator({ isOpen, onClose, onCreateToken }: TokenCreatorPro
                 {/* Create button */}
                 <Button
                   onClick={handleCreateCustom}
-                  disabled={!customName.trim() || !customPower.trim() || !customToughness.trim()}
+                  disabled={!customName.trim() || (isCreatureType && (!customPower.trim() || !customToughness.trim()))}
                   className="w-full bg-gold-600 hover:bg-gold-500 text-dungeon-900 font-semibold disabled:opacity-40"
                 >
                   Create Token
