@@ -196,7 +196,6 @@ export function GameRoom({
     // 3. Mulligan is done
     // 4. It's my turn
     // 5. We haven't already auto-started this specific turn
-    // 6. It's not the first turn (turn 1, first player doesn't auto-draw on start)
     if (
       gamePhase === 'playing' &&
       gameInitialized &&
@@ -209,7 +208,9 @@ export function GameRoom({
         lastAutoStartedTurnRef.current = turnKey
         // Small delay to ensure state is synced
         const timer = setTimeout(() => {
-          actions.handleStartTurn()
+          // First player (turn 1) doesn't draw a card at the beginning of their first turn
+          const isFirstTurn = currentTurn === 1
+          actions.handleStartTurn(isFirstTurn)
         }, 300)
         return () => clearTimeout(timer)
       }

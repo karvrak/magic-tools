@@ -67,7 +67,7 @@ export interface GameActions {
   confirmGenericCounter: () => void
   adjustGenericCounter: (uniqueId: string, label: string, delta: number) => void
   removeGenericCounter: (uniqueId: string, label: string) => void
-  handleStartTurn: () => void
+  handleStartTurn: (skipDraw?: boolean) => void
   handleEndTurn: () => void
   onAdvancePhase: () => void
   onJumpToPhase: (phase: GamePhase) => void
@@ -286,8 +286,9 @@ export function useGameActions(
     }
   }, [graveyard, setGraveyard, setLibrary, gameLog, currentPlayer])
 
-  // Start of turn - untap all, reset mana, draw, advance through phases
-  const handleStartTurn = useCallback(() => {
+  // Start of turn - untap all, reset mana, draw (unless skipped), advance through phases
+  // skipDraw: if true, skip the draw step (e.g., first player on first turn)
+  const handleStartTurn = useCallback((skipDraw: boolean = false) => {
     // Log the turn start (turn number is not available here, so we use a generic message)
     // Untap phase: untap all permanents and reset mana
     setBattlefield(prev => prev.map(card => ({ ...card, tapped: false })))
@@ -295,21 +296,25 @@ export function useGameActions(
     setManaPool(landCount)
 
     if (phaseSystem) {
-      // Walk through untap -> upkeep -> draw (auto-draw) -> main1
+      // Walk through untap -> upkeep -> draw (auto-draw unless skipped) -> main1
       phaseSystem.beginTurn()
       // Small delay to visually step through early phases, then settle on main1
       setTimeout(() => {
         phaseSystem.jumpToPhase('upkeep')
         setTimeout(() => {
           phaseSystem.jumpToPhase('draw')
-          draw(1)
+          if (!skipDraw) {
+            draw(1)
+          }
           setTimeout(() => {
             phaseSystem.jumpToPhase('main1')
           }, 200)
         }, 200)
       }, 200)
     } else {
-      draw(1)
+      if (!skipDraw) {
+        draw(1)
+      }
     }
   }, [battlefield, draw, setBattlefield, setManaPool, phaseSystem, gameLog, currentPlayer])
 

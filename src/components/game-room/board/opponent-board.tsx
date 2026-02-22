@@ -1,6 +1,6 @@
 'use client'
 
-import { Heart, Skull } from 'lucide-react'
+import { Heart, Skull, Sparkles, Gem } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GamePlayer } from '@/lib/game-room/types'
 import { OpponentBattlefieldCard } from './opponent-card'
@@ -26,7 +26,20 @@ export function OpponentBoard({
         const oppCards = opponent.battlefieldCards || []
         const opponentLands = oppCards.filter(c => c.type.toLowerCase().includes('land'))
         const opponentCreatures = oppCards.filter(c => c.type.toLowerCase().includes('creature') && !c.type.toLowerCase().includes('land'))
-        const opponentOther = oppCards.filter(c => !c.type.toLowerCase().includes('land') && !c.type.toLowerCase().includes('creature'))
+        const opponentEnchantments = oppCards.filter(c => {
+          const type = c.type.toLowerCase()
+          return type.includes('enchantment') && !type.includes('creature') && !type.includes('land')
+        })
+        const opponentArtifacts = oppCards.filter(c => {
+          const type = c.type.toLowerCase()
+          return (type.includes('artifact') || type.includes('planeswalker'))
+                 && !type.includes('creature') && !type.includes('land') && !type.includes('enchantment')
+        })
+        const opponentOther = oppCards.filter(c => {
+          const type = c.type.toLowerCase()
+          return !type.includes('land') && !type.includes('creature') &&
+                 !type.includes('enchantment') && !type.includes('artifact') && !type.includes('planeswalker')
+        })
 
         return (
           <div key={opponent.id} className={cn(
@@ -112,7 +125,66 @@ export function OpponentBoard({
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {/* Row 1: Lands */}
+                  {/* Row 1: Enchantments (left) | Creatures (center) | Artifacts (right) */}
+                  {(opponentCreatures.length > 0 || opponentEnchantments.length > 0 || opponentArtifacts.length > 0 || opponentOther.length > 0) && (
+                    <div className="flex gap-2">
+                      {/* Enchantments zone - LEFT */}
+                      {opponentEnchantments.length > 0 && (
+                        <div className="flex-shrink-0 border-r border-dungeon-700/50 pr-2">
+                          <div className="text-[8px] text-parchment-700 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                            <Sparkles className="w-2 h-2" />
+                            Enchantments
+                          </div>
+                          <div className="grid grid-cols-4 gap-1 max-w-[200px]">
+                            {opponentEnchantments.map((card) => (
+                              <OpponentBattlefieldCard key={card.id} card={card} small={false} onSelect={() => onPreviewCard({ name: card.name, image: card.image, type: card.type })} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Creatures zone - CENTER */}
+                      <div className="flex-1 min-h-[30px]">
+                        {opponentCreatures.length > 0 && (
+                          <div>
+                            <div className="text-[8px] text-parchment-700 uppercase tracking-wider mb-0.5 text-center">Creatures</div>
+                            <div className="flex flex-wrap gap-1.5 justify-center">
+                              {opponentCreatures.map((card) => (
+                                <OpponentBattlefieldCard key={card.id} card={card} small={false} onSelect={() => onPreviewCard({ name: card.name, image: card.image, type: card.type })} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {opponentOther.length > 0 && (
+                          <div className={opponentCreatures.length > 0 ? "mt-1" : ""}>
+                            <div className="text-[8px] text-parchment-700 uppercase tracking-wider mb-0.5 text-center">Other</div>
+                            <div className="flex flex-wrap gap-1.5 justify-center">
+                              {opponentOther.map((card) => (
+                                <OpponentBattlefieldCard key={card.id} card={card} small={false} onSelect={() => onPreviewCard({ name: card.name, image: card.image, type: card.type })} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Artifacts zone - RIGHT */}
+                      {opponentArtifacts.length > 0 && (
+                        <div className="flex-shrink-0 border-l border-dungeon-700/50 pl-2">
+                          <div className="text-[8px] text-parchment-700 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                            <Gem className="w-2 h-2" />
+                            Artifacts
+                          </div>
+                          <div className="grid grid-cols-4 gap-1 max-w-[200px]">
+                            {opponentArtifacts.map((card) => (
+                              <OpponentBattlefieldCard key={card.id} card={card} small={false} onSelect={() => onPreviewCard({ name: card.name, image: card.image, type: card.type })} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Row 2: Lands */}
                   {opponentLands.length > 0 && (
                     <div>
                       <div className="text-[8px] text-parchment-700 uppercase tracking-wider mb-0.5 text-center">Lands</div>
@@ -121,31 +193,6 @@ export function OpponentBoard({
                           <OpponentBattlefieldCard key={card.id} card={card} small={true} onSelect={() => onPreviewCard({ name: card.name, image: card.image, type: card.type })} />
                         ))}
                       </div>
-                    </div>
-                  )}
-                  {/* Row 2: Enchantments/Artifacts + Creatures */}
-                  {(opponentOther.length > 0 || opponentCreatures.length > 0) && (
-                    <div className="flex gap-2">
-                      {opponentOther.length > 0 && (
-                        <div className="flex-shrink-0 border-r border-dungeon-700/50 pr-2">
-                          <div className="text-[8px] text-parchment-700 uppercase tracking-wider mb-0.5">Enchant / Artifacts</div>
-                          <div className="flex flex-col gap-1">
-                            {opponentOther.map((card) => (
-                              <OpponentBattlefieldCard key={card.id} card={card} small={false} onSelect={() => onPreviewCard({ name: card.name, image: card.image, type: card.type })} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {opponentCreatures.length > 0 && (
-                        <div className="flex-1">
-                          <div className="text-[8px] text-parchment-700 uppercase tracking-wider mb-0.5 text-center">Creatures</div>
-                          <div className="flex flex-wrap gap-1.5 justify-center">
-                            {opponentCreatures.map((card) => (
-                              <OpponentBattlefieldCard key={card.id} card={card} small={false} onSelect={() => onPreviewCard({ name: card.name, image: card.image, type: card.type })} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
