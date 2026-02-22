@@ -311,13 +311,14 @@ export const joinSessionSchema = z.object({
 
 /** PATCH /api/sessions/[code] */
 export const updateSessionSchema = z.object({
-  action: z.enum(['start', 'nextTurn', 'finish', 'advancePhase', 'respond', 'emote']).optional(),
+  action: z.enum(['start', 'nextTurn', 'finish', 'advancePhase', 'respond', 'emote', 'rematch', 'rematchResponse', 'rematchCancel']).optional(),
   playerId: z.string().optional(),
   phase: z.string().optional(),
   responds: z.boolean().optional(),
   emoteId: z.string().optional(),
   playerName: z.string().optional(),
   playerColor: z.string().optional(),
+  accepted: z.boolean().optional(),
 }).passthrough()
 
 /** PATCH /api/sessions/[code]/player */

@@ -20,7 +20,8 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { GameRoom } from '@/components/game-room/game-room'
 import { GameOverOverlay } from '@/components/game-room/systems/game-over-overlay'
-import { useGameSync, ConnectionStatus } from '@/hooks/game-room/use-game-sync'
+import { useGameSync, ConnectionStatus, GameEvent } from '@/hooks/game-room/use-game-sync'
+import { useRematch } from '@/hooks/game-room/use-rematch'
 import { CardWithPrice } from '@/types/scryfall'
 
 interface DeckCard {
@@ -104,12 +105,39 @@ function GameSessionContent({ code }: { code: string }) {
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  
+
   const playerId = searchParams.get('playerId')
   const [copied, setCopied] = useState(false)
 
+  // Rematch system
+  const {
+    rematchState,
+    requestRematch,
+    cancelRematch,
+    acceptRematch,
+    declineRematch,
+    handleRematchEvent,
+    resetState: resetRematchState,
+  } = useRematch({
+    code,
+    playerId: playerId || '',
+    onRematchAccepted: () => {
+      toast({ title: 'Rematch accepted!', description: 'Starting new game...' })
+    },
+    onRematchDeclined: () => {
+      // Optional: can show toast here
+    },
+  })
+
+  // Handle SSE events including rematch events
+  const handleGameEvent = useCallback((event: GameEvent) => {
+    if (event.type === 'rematch_request' || event.type === 'rematch_response' || event.type === 'rematch_cancelled') {
+      handleRematchEvent({ type: event.type, data: event.data as Record<string, unknown> })
+    }
+  }, [handleRematchEvent])
+
   // SSE-based real-time sync with automatic polling fallback
-  const { connectionStatus } = useGameSync(code)
+  const { connectionStatus } = useGameSync(code, handleGameEvent)
 
   // Fetch session data — SSE triggers invalidation, no polling needed
   const { data: sessionData, isLoading: sessionLoading, error: sessionError } = useQuery<{ session: GameSession }>({
@@ -231,7 +259,7 @@ function GameSessionContent({ code }: { code: string }) {
 
   // Auto-start game when all players ready (with small delay for countdown sync)
   const allPlayersReady = session?.players && session.players.length >= 2 && session.players.every(p => p.isReady)
-  
+
   useEffect(() => {
     if (allPlayersReady && session?.status === 'waiting' && isHost) {
       // Host triggers the game start after 3.5 seconds (to account for countdown)
@@ -241,6 +269,13 @@ function GameSessionContent({ code }: { code: string }) {
       return () => clearTimeout(timer)
     }
   }, [allPlayersReady, session?.status, isHost, sessionActionMutation])
+
+  // Reset rematch state when session goes back to waiting (after rematch accepted)
+  useEffect(() => {
+    if (session?.status === 'waiting') {
+      resetRematchState()
+    }
+  }, [session?.status, resetRematchState])
 
   if (sessionLoading) {
     return (
@@ -433,6 +468,11 @@ function GameSessionContent({ code }: { code: string }) {
         winner={session.players.find(p => !p.isEliminated) || null}
         currentPlayerId={playerId || ''}
         players={session.players}
+        rematchState={rematchState}
+        onRematch={requestRematch}
+        onRematchAccept={acceptRematch}
+        onRematchDecline={declineRematch}
+        onRematchCancel={cancelRematch}
         onNewGame={() => router.push('/play')}
         onLeave={() => leaveMutation.mutate()}
       />

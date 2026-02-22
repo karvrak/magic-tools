@@ -35,6 +35,9 @@ export type GameEvent = {
     | 'response_alert'
     | 'emote'
     | 'log_entry'
+    | 'rematch_request'
+    | 'rematch_response'
+    | 'rematch_cancelled'
   sessionCode: string
   data: unknown
   timestamp: number
