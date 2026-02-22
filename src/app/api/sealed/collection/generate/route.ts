@@ -89,6 +89,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const isAllCollection = setCode === '_all'
+
     // Build owner filter for SQL
     // When ownerId is provided: filter collection by owner OR null, filter decks by owner OR null
     const ownerFilter = ownerId
@@ -132,8 +134,8 @@ export async function POST(request: NextRequest) {
           SUM(ci.quantity) as owned_qty
         FROM "CollectionItem" ci
         JOIN "Card" c ON ci."cardId" = c.id
-        WHERE c."setCode" = '${setCode.toLowerCase()}'
-          AND c."imageNormal" IS NOT NULL
+        WHERE c."imageNormal" IS NOT NULL
+          ${isAllCollection ? '' : `AND c."setCode" = '${setCode.toLowerCase()}'`}
           ${ownerFilter}
         GROUP BY ci."cardId", c."oracleId"
       ),
@@ -330,11 +332,12 @@ export async function POST(request: NextRequest) {
     const pool = boosters.flatMap(b => b.cards)
 
     // Get set name from first card or use set code
-    const setName = cardPool[0]?.setName || setCode.toUpperCase()
+    const resolvedSetCode = isAllCollection ? '_all' : setCode
+    const resolvedSetName = isAllCollection ? 'Toute la collection' : (cardPool[0]?.setName || setCode.toUpperCase())
 
     return NextResponse.json({
-      setCode,
-      setName,
+      setCode: resolvedSetCode,
+      setName: resolvedSetName,
       boosters,
       pool,
       totalCards: pool.length,

@@ -118,7 +118,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ sets })
+    const globalStats = {
+      totalCards: sets.reduce((sum, s) => sum + s.totalCards, 0),
+      commons: sets.reduce((sum, s) => sum + s.commons, 0),
+      uncommons: sets.reduce((sum, s) => sum + s.uncommons, 0),
+      rares: sets.reduce((sum, s) => sum + s.rares, 0),
+      mythics: sets.reduce((sum, s) => sum + s.mythics, 0),
+      lands: sets.reduce((sum, s) => sum + s.lands, 0),
+    }
+
+    return NextResponse.json({ sets, globalStats })
   } catch (error) {
     console.error('Error fetching collection sets:', error)
     return NextResponse.json(

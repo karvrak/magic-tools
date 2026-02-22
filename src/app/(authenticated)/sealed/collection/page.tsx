@@ -74,6 +74,15 @@ interface CollectionSetInfo {
   isViable: boolean
 }
 
+interface GlobalStats {
+  totalCards: number
+  commons: number
+  uncommons: number
+  rares: number
+  mythics: number
+  lands: number
+}
+
 interface GeneratedPool {
   setCode: string
   setName: string
@@ -272,7 +281,7 @@ export default function SealedCollectionPage() {
       if (activeOwner?.id) params.set('ownerId', activeOwner.id)
       const res = await fetch(`/api/sealed/collection/sets?${params}`)
       if (!res.ok) throw new Error('Failed to fetch sets')
-      return res.json() as Promise<{ sets: CollectionSetInfo[] }>
+      return res.json() as Promise<{ sets: CollectionSetInfo[]; globalStats: GlobalStats }>
     },
   })
 
@@ -467,8 +476,24 @@ export default function SealedCollectionPage() {
 
   // Selected set info
   const selectedSetInfo = useMemo(() => {
-    if (!selectedSet || !setsData?.sets) return null
-    return setsData.sets.find(s => s.setCode === selectedSet)
+    if (!setsData) return null
+    if (selectedSet === '_all') {
+      const gs = setsData.globalStats
+      return {
+        setCode: '_all',
+        setName: 'Toute la collection',
+        totalCards: gs.totalCards,
+        availableCards: 0,
+        commons: gs.commons,
+        uncommons: gs.uncommons,
+        rares: gs.rares,
+        mythics: gs.mythics,
+        lands: gs.lands,
+        isViable: gs.commons >= 7 && gs.uncommons >= 3 && (gs.rares >= 1 || gs.mythics >= 1),
+      }
+    }
+    if (!selectedSet) return null
+    return setsData.sets.find(s => s.setCode === selectedSet) ?? null
   }, [selectedSet, setsData])
 
   return (
@@ -577,6 +602,9 @@ export default function SealedCollectionPage() {
                   className="w-full bg-dungeon-800 border border-dungeon-600 rounded-lg px-3 py-3 text-parchment-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3"
                 >
                   <option value="">-- Select a set --</option>
+                  {setsData?.globalStats && setsData.globalStats.totalCards > 0 && (
+                    <option value="_all">Toute la collection ({setsData.globalStats.totalCards} cartes)</option>
+                  )}
                   {viableSets.length > 0 && (
                     <optgroup label="Available sets">
                       {viableSets.map((set) => (
