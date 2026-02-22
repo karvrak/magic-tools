@@ -575,13 +575,16 @@ export function MultiplayerPlaytest({
     setBattlefield(prev => [...prev, battlefieldCard])
   }, [graveyard])
 
-  // Start of turn - untap all, reset mana, draw
+  // Start of turn - untap all, reset mana, draw (unless first turn for first player)
   const handleStartTurn = useCallback(() => {
     setBattlefield(prev => prev.map(card => ({ ...card, tapped: false })))
     const landCount = battlefield.filter(c => isLand(c)).length
     setManaPool(landCount)
-    draw(1)
-  }, [battlefield, draw])
+    // First player (turn 1) doesn't draw a card at the beginning of their first turn
+    if (currentTurn !== 1) {
+      draw(1)
+    }
+  }, [battlefield, draw, currentTurn])
 
   // End turn - pass to next player
   const handleEndTurn = useCallback(() => {
