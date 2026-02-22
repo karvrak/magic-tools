@@ -61,18 +61,24 @@ export async function GET(request: NextRequest) {
       }
 
       if (colors.length > 0) {
+        // Sort colors alphabetically to match database storage order
+        const sortedColors = [...colors].sort()
+
         if (colorMode === 'exact') {
-          conditions.colors = { equals: colors }
+          // Exact match: card has exactly these colors (sorted in WUBRG order)
+          conditions.colors = { equals: sortedColors }
         } else if (colorMode === 'atMost') {
-          conditions.colors = { hasSome: colors }
+          // At most: card colors are a subset of selected colors
+          const allColors = ['B', 'G', 'R', 'U', 'W']
+          conditions.colors = { hasSome: sortedColors }
           conditions.NOT = {
             colors: {
-              hasSome: ['W', 'U', 'B', 'R', 'G'].filter(c => !colors.includes(c))
+              hasSome: allColors.filter(c => !sortedColors.includes(c))
             }
           }
         } else {
-          // include mode (default)
-          conditions.colors = { hasSome: colors }
+          // include mode (default): card has at least all selected colors
+          conditions.colors = { hasEvery: sortedColors }
         }
       }
 
