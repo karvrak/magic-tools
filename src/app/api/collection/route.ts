@@ -61,19 +61,19 @@ export async function GET(request: NextRequest) {
       }
 
       if (colors.length > 0) {
-        // Sort colors in WUBRG order to match database storage
-        const WUBRG_ORDER = ['W', 'U', 'B', 'R', 'G']
-        const sortedColors = [...colors].sort((a, b) => WUBRG_ORDER.indexOf(a) - WUBRG_ORDER.indexOf(b))
+        // Sort colors alphabetically to match database storage order
+        const sortedColors = [...colors].sort()
 
         if (colorMode === 'exact') {
           // Exact match: card has exactly these colors (sorted in WUBRG order)
           conditions.colors = { equals: sortedColors }
         } else if (colorMode === 'atMost') {
           // At most: card colors are a subset of selected colors
+          const allColors = ['B', 'G', 'R', 'U', 'W']
           conditions.colors = { hasSome: sortedColors }
           conditions.NOT = {
             colors: {
-              hasSome: WUBRG_ORDER.filter(c => !sortedColors.includes(c))
+              hasSome: allColors.filter(c => !sortedColors.includes(c))
             }
           }
         } else {
