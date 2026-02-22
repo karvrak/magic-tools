@@ -42,8 +42,11 @@ export interface GameActions {
   toggleTap: (uniqueId: string) => void
   sendToGraveyard: (uniqueId: string) => void
   bounceToHand: (uniqueId: string) => void
+  putOnTopOfLibrary: (uniqueId: string) => void
+  putOnBottomOfLibrary: (uniqueId: string) => void
   graveyardToHand: (index: number) => void
   graveyardToBattlefield: (index: number) => void
+  graveyardToLibraryTop: (index: number) => void
   exileFromHand: (index: number) => void
   exileFromBattlefield: (uniqueId: string) => void
   exileToHand: (index: number) => void
@@ -226,6 +229,30 @@ export function useGameActions(
     }
   }, [battlefield, recordAction, setBattlefield, setHand, gameLog, currentPlayer, pushUndoSnapshot])
 
+  // Put on top of library from battlefield
+  const putOnTopOfLibrary = useCallback((uniqueId: string) => {
+    const card = battlefield.find(c => c.uniqueId === uniqueId)
+    if (!card) return
+    pushUndoSnapshot()
+    setBattlefield(prev => prev.filter(c => c.uniqueId !== uniqueId))
+    setLibrary(prev => [card, ...prev])
+    if (gameLog && currentPlayer) {
+      gameLog.addActionLog(currentPlayer.name, currentPlayer.color, `puts ${card.printedName || card.name || 'Unknown'} on top of library`)
+    }
+  }, [battlefield, setBattlefield, setLibrary, gameLog, currentPlayer, pushUndoSnapshot])
+
+  // Put on bottom of library from battlefield
+  const putOnBottomOfLibrary = useCallback((uniqueId: string) => {
+    const card = battlefield.find(c => c.uniqueId === uniqueId)
+    if (!card) return
+    pushUndoSnapshot()
+    setBattlefield(prev => prev.filter(c => c.uniqueId !== uniqueId))
+    setLibrary(prev => [...prev, card])
+    if (gameLog && currentPlayer) {
+      gameLog.addActionLog(currentPlayer.name, currentPlayer.color, `puts ${card.printedName || card.name || 'Unknown'} on bottom of library`)
+    }
+  }, [battlefield, setBattlefield, setLibrary, gameLog, currentPlayer, pushUndoSnapshot])
+
   // Graveyard to hand
   const graveyardToHand = useCallback((index: number) => {
     const card = graveyard[index]
@@ -247,6 +274,17 @@ export function useGameActions(
     setGraveyard(prev => prev.filter((_, i) => i !== index))
     setBattlefield(prev => [...prev, battlefieldCard])
   }, [graveyard, setGraveyard, setBattlefield])
+
+  // Graveyard to library top
+  const graveyardToLibraryTop = useCallback((index: number) => {
+    const card = graveyard[index]
+    if (!card) return
+    setGraveyard(prev => prev.filter((_, i) => i !== index))
+    setLibrary(prev => [card, ...prev])
+    if (gameLog && currentPlayer) {
+      gameLog.addActionLog(currentPlayer.name, currentPlayer.color, `puts ${card.printedName || card.name || 'Unknown'} on top of library`)
+    }
+  }, [graveyard, setGraveyard, setLibrary, gameLog, currentPlayer])
 
   // Start of turn - untap all, reset mana, draw, advance through phases
   const handleStartTurn = useCallback(() => {
@@ -621,14 +659,17 @@ export function useGameActions(
 
   // Create a token on the battlefield
   const createToken = useCallback((tokenData: { name: string; power: string; toughness: string; type: string; color: string }) => {
+    const isCreatureToken = tokenData.type.toLowerCase().includes('creature')
+    const hasStats = tokenData.power && tokenData.toughness && isCreatureToken
+
     const tokenCard: BattlefieldCard = {
       id: `token-${generateUniqueId()}`,
-      name: `${tokenData.name} (${tokenData.power}/${tokenData.toughness})`,
+      name: hasStats ? `${tokenData.name} (${tokenData.power}/${tokenData.toughness})` : tokenData.name,
       printedName: tokenData.name,
       typeLine: tokenData.type,
       printedTypeLine: tokenData.type,
-      power: tokenData.power,
-      toughness: tokenData.toughness,
+      power: hasStats ? tokenData.power : undefined,
+      toughness: hasStats ? tokenData.toughness : undefined,
       colors: tokenData.color === 'C' ? [] : [tokenData.color],
       colorIdentity: tokenData.color === 'C' ? [] : [tokenData.color],
       imageNormal: null,
@@ -640,7 +681,8 @@ export function useGameActions(
     } as unknown as BattlefieldCard
     setBattlefield(prev => [...prev, tokenCard])
     if (gameLog && currentPlayer) {
-      gameLog.addActionLog(currentPlayer.name, currentPlayer.color, `creates a ${tokenData.power}/${tokenData.toughness} ${tokenData.name} token`)
+      const statsText = hasStats ? `${tokenData.power}/${tokenData.toughness} ` : ''
+      gameLog.addActionLog(currentPlayer.name, currentPlayer.color, `creates a ${statsText}${tokenData.name} token`)
     }
   }, [setBattlefield, gameLog, currentPlayer])
 
@@ -659,8 +701,11 @@ export function useGameActions(
     toggleTap,
     sendToGraveyard,
     bounceToHand,
+    putOnTopOfLibrary,
+    putOnBottomOfLibrary,
     graveyardToHand,
     graveyardToBattlefield,
+    graveyardToLibraryTop,
     exileFromHand,
     exileFromBattlefield,
     exileToHand,

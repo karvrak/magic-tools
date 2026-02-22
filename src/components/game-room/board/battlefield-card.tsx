@@ -9,6 +9,7 @@ import {
   Minus,
   Zap,
   X,
+  ArrowUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BattlefieldCard, CardCounters } from '@/lib/game-room/types'
@@ -26,6 +27,9 @@ function TokenBattlefieldDisplay({ card, larger }: { card: BattlefieldCard; larg
   const color = card.colors?.[0] || 'C'
   const bg = TOKEN_BG[color] || 'from-gray-400/20 to-gray-500/10'
   const tokenName = card.printedName || card.name?.replace(/\s*\(.*\)/, '') || 'Token'
+  const typeLine = card.typeLine || ''
+  const isCreatureToken = typeLine.toLowerCase().includes('creature')
+  const hasStats = card.power && card.toughness && isCreatureToken
 
   return (
     <div className={cn(
@@ -42,14 +46,16 @@ function TokenBattlefieldDisplay({ card, larger }: { card: BattlefieldCard; larg
           {tokenName}
         </span>
       </div>
-      {/* P/T */}
-      {card.power && card.toughness && (
+      {/* P/T - only for creatures */}
+      {hasStats ? (
         <div className={cn(
           "font-bold text-gold-400 mb-1",
           larger ? "text-base" : "text-sm"
         )}>
           {card.power}/{card.toughness}
         </div>
+      ) : (
+        <div className="flex-1" /> // Spacer for non-creatures
       )}
       {/* Type */}
       <div className="w-full px-0.5 pb-0.5 text-center">
@@ -57,7 +63,7 @@ function TokenBattlefieldDisplay({ card, larger }: { card: BattlefieldCard; larg
           "text-parchment-500 leading-tight block truncate",
           larger ? "text-[8px]" : "text-[7px]"
         )}>
-          {(card.typeLine || 'Token').replace('Token ', '')}
+          {typeLine.replace('Token ', '') || 'Token'}
         </span>
       </div>
     </div>
@@ -79,12 +85,30 @@ function CounterBadge({ count, color, label }: { count: number; color: string; l
   )
 }
 
+function GenericCounterBadge({ count, color, label }: { count: number; color: string; label: string }) {
+  if (count === 0) return null
+  // Display first letter of the counter label (uppercase) with count
+  const letter = label.charAt(0).toUpperCase()
+  return (
+    <div
+      className={cn(
+        "min-w-[16px] h-[16px] rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-md border border-white/20",
+        color
+      )}
+      title={`${label} (${count})`}
+    >
+      {letter}{count > 1 ? count : ''}
+    </div>
+  )
+}
+
 interface BattlefieldCardMiniProps {
   card: BattlefieldCard
   onTap: () => void
   onGraveyard: () => void
   onBounce: () => void
   onExile?: () => void
+  onPutOnTopOfLibrary?: () => void
   onAdjustCounter?: (type: 'plusOne' | 'minusOne', delta: number) => void
   onAddGenericCounter?: () => void
   onAdjustGenericCounter?: (label: string, delta: number) => void
@@ -99,6 +123,7 @@ export function BattlefieldCardMini({
   onGraveyard,
   onBounce,
   onExile,
+  onPutOnTopOfLibrary,
   onAdjustCounter,
   onAddGenericCounter,
   onAdjustGenericCounter,
@@ -152,7 +177,7 @@ export function BattlefieldCardMini({
               <CounterBadge count={card.counters.plusOne} color="bg-emerald-600" label={`+1/+1 (${card.counters.plusOne})`} />
               <CounterBadge count={card.counters.minusOne} color="bg-dragon-600" label={`-1/-1 (${card.counters.minusOne})`} />
               {card.counters.genericCounters.map((gc) => (
-                <CounterBadge key={gc.label} count={gc.count} color="bg-arcane-600" label={`${gc.label} (${gc.count})`} />
+                <GenericCounterBadge key={gc.label} count={gc.count} color="bg-arcane-600" label={gc.label} />
               ))}
             </div>
           )}
@@ -176,6 +201,11 @@ export function BattlefieldCardMini({
         {onExile && (
           <button onClick={(e) => { e.stopPropagation(); onExile(); }} className="p-0.5 bg-parchment-700/90 text-white rounded" title="Exile">
             <EyeOff className="w-2.5 h-2.5" />
+          </button>
+        )}
+        {onPutOnTopOfLibrary && (
+          <button onClick={(e) => { e.stopPropagation(); onPutOnTopOfLibrary(); }} className="p-0.5 bg-amber-600/90 text-white rounded" title="Put on top of library">
+            <ArrowUp className="w-2.5 h-2.5" />
           </button>
         )}
       </div>

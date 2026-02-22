@@ -4,20 +4,22 @@ import { use, useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { 
+import {
   ArrowLeft,
-  Users, 
+  Users,
   Crown,
   Copy,
   Check,
   Play,
   Loader2,
   LogOut,
+  Flag,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { GameRoom } from '@/components/game-room/game-room'
+import { GameOverOverlay } from '@/components/game-room/systems/game-over-overlay'
 import { useGameSync, ConnectionStatus } from '@/hooks/game-room/use-game-sync'
 import { CardWithPrice } from '@/types/scryfall'
 
@@ -178,6 +180,28 @@ function GameSessionContent({ code }: { code: string }) {
     },
     onSuccess: () => {
       router.push('/play')
+    },
+  })
+
+  // Abandon game mutation
+  const abandonMutation = useMutation({
+    mutationFn: async () => {
+      // Mark player as eliminated
+      await fetch(`/api/sessions/${code}/player`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, isEliminated: true, life: 0 }),
+      })
+      // Check if game should end
+      const response = await fetch(`/api/sessions/${code}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'nextTurn', playerId }),
+      })
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session', code] })
     },
   })
 
@@ -363,6 +387,18 @@ function GameSessionContent({ code }: { code: string }) {
             {session.code}
             {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
           </button>
+          {session.status === 'playing' && !currentPlayer?.isEliminated && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => abandonMutation.mutate()}
+              disabled={abandonMutation.isPending}
+              className="text-dragon-400 border-dragon-500/30 hover:bg-dragon-500/10"
+            >
+              <Flag className="w-4 h-4 mr-1" />
+              Abandon
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -391,15 +427,15 @@ function GameSessionContent({ code }: { code: string }) {
         />
       )}
 
-      {/* Finished state */}
-      {session.status === 'finished' && (
-        <div className="card-frame p-6 text-center">
-          <h2 className="font-medieval text-xl text-gold-400 mb-4">Game Over!</h2>
-          <Link href="/play">
-            <Button>New Game</Button>
-          </Link>
-        </div>
-      )}
+      {/* Game Over Overlay - shown for finished games OR when any player is eliminated */}
+      <GameOverOverlay
+        isVisible={session.status === 'finished' || session.players.filter(p => !p.isEliminated).length <= 1}
+        winner={session.players.find(p => !p.isEliminated) || null}
+        currentPlayerId={playerId || ''}
+        players={session.players}
+        onNewGame={() => router.push('/play')}
+        onLeave={() => leaveMutation.mutate()}
+      />
     </div>
   )
 }

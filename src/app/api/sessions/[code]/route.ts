@@ -183,12 +183,16 @@ export async function PATCH(
         )
       }
 
+      // Randomly select the starting player
+      const randomIndex = Math.floor(Math.random() * session.players.length)
+      const startingPlayerId = session.players[randomIndex].id
+
       const updatedSession = await prisma.gameSession.update({
         where: { id: session.id },
         data: {
           status: 'playing',
           currentTurn: 1,
-          activePlayerId: session.players[0].id,
+          activePlayerId: startingPlayerId,
           startedAt: new Date(),
         },
         include: { players: { orderBy: { playerOrder: 'asc' } } },

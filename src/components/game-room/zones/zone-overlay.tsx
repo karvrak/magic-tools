@@ -13,6 +13,7 @@ import {
   Check,
   ChevronUp,
   ChevronDown,
+  ArrowUp,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -32,6 +33,7 @@ interface ZoneOverlayProps {
   onCloseGraveyard: () => void
   onGraveyardToHand: (index: number) => void
   onGraveyardToBattlefield: (index: number) => void
+  onGraveyardToLibraryTop: (index: number) => void
 
   // Exile viewer
   showExile: boolean
@@ -88,6 +90,7 @@ export function ZoneOverlay({
   onCloseGraveyard,
   onGraveyardToHand,
   onGraveyardToBattlefield,
+  onGraveyardToLibraryTop,
   showExile,
   exile,
   onCloseExile,
@@ -184,6 +187,9 @@ export function ZoneOverlay({
                     </button>
                     <button onClick={() => onGraveyardToBattlefield(index)} className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded shadow-md" title="Put onto battlefield">
                       <Play className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => onGraveyardToLibraryTop(index)} className="p-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded shadow-md" title="Put on top of library">
+                      <ArrowUp className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
