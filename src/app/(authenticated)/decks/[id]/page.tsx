@@ -59,6 +59,7 @@ import { SimulationStats } from '@/components/deck/simulation-stats'
 import { DeckAvailability } from '@/components/deck/deck-availability'
 import { DeckSuggestions } from '@/components/deck/deck-suggestions'
 import { CardDetailModal } from '@/components/card/card-detail-modal'
+import { useAuthUser } from '@/contexts/auth-user'
 import { SetSelector } from '@/components/card/set-selector'
 import { CardWithPrice } from '@/types/scryfall'
 
@@ -109,6 +110,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { isAdmin } = useAuthUser()
   const [selectedDeckCard, setSelectedDeckCard] = useState<DeckCard | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showCoverModal, setShowCoverModal] = useState(false)
@@ -895,7 +897,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
         <>
           <DeckStats cards={deck.cards} />
           <DeckAvailability deckId={id} />
-          <DeckSuggestions deckId={id} />
+          {isAdmin && <DeckSuggestions deckId={id} />}
           <SimulationStats deckId={id} cardCount={totalCards} />
         </>
       )}

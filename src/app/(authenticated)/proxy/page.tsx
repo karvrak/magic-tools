@@ -168,13 +168,22 @@ export default function ProxyPage() {
                 {/* Card Image */}
                 <div className="relative aspect-[5/7] rounded-md overflow-hidden mb-2">
                   {item.card.imageSmall ? (
-                    <Image
-                      src={item.card.imageSmall}
-                      alt={item.card.printedName || item.card.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-                    />
+                    (item.card.imageSmall).startsWith('/api/custom-sets/') ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.card.imageSmall}
+                        alt={item.card.printedName || item.card.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src={item.card.imageSmall}
+                        alt={item.card.printedName || item.card.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+                      />
+                    )
                   ) : (
                     <div className="w-full h-full bg-dungeon-700 flex items-center justify-center">
                       <Printer className="w-8 h-8 text-dungeon-500" />

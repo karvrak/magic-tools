@@ -3,6 +3,13 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { GamePlayer } from '@/lib/game-room/types'
 
@@ -13,6 +20,9 @@ interface LobbyScreenProps {
   countdown: number | null
   allPlayersReady: boolean
   onSetReady: (ready: boolean) => void
+  decks?: { id: string; name: string }[]
+  selectedDeckId?: string
+  onSelectDeck?: (deckId: string) => void
 }
 
 export function LobbyScreen({
@@ -22,7 +32,11 @@ export function LobbyScreen({
   countdown,
   allPlayersReady,
   onSetReady,
+  decks,
+  selectedDeckId,
+  onSelectDeck,
 }: LobbyScreenProps) {
+  const hasDeck = !!selectedDeckId
   return (
     <div className="space-y-6">
       {/* Countdown overlay */}
@@ -71,7 +85,20 @@ export function LobbyScreen({
                     <span className="text-xs text-arcane-400">(you)</span>
                   )}
                 </p>
-                {player.deckName ? (
+                {player.id === playerId && decks && onSelectDeck ? (
+                  <Select value={selectedDeckId || ''} onValueChange={onSelectDeck}>
+                    <SelectTrigger className="mt-1 h-8 text-sm w-[200px]">
+                      <SelectValue placeholder="Select a deck..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {decks.map((deck) => (
+                        <SelectItem key={deck.id} value={deck.id}>
+                          {deck.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : player.deckName ? (
                   <p className="text-sm text-parchment-500">{player.deckName}</p>
                 ) : (
                   <p className="text-sm text-parchment-600 italic">No deck</p>
@@ -111,6 +138,7 @@ export function LobbyScreen({
           <Button
             size="lg"
             onClick={() => onSetReady(true)}
+            disabled={!hasDeck}
             className="min-w-[200px]"
           >
             <Check className="w-5 h-5 mr-2" />
@@ -118,7 +146,12 @@ export function LobbyScreen({
           </Button>
         )}
 
-        {!allPlayersReady && (
+        {!hasDeck && !currentPlayer.isReady && (
+          <p className="text-amber-400 text-sm mt-3">
+            Select a deck to get ready
+          </p>
+        )}
+        {hasDeck && !allPlayersReady && (
           <p className="text-parchment-500 text-sm mt-3">
             Waiting for all players to be ready...
           </p>

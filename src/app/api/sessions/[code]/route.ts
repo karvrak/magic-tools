@@ -303,6 +303,12 @@ export async function PATCH(
     }
 
     if (action === 'rematch') {
+      if (session.status !== 'finished') {
+        return NextResponse.json({ error: 'Game is not finished' }, { status: 400 })
+      }
+      if (session.players.length > 2) {
+        return NextResponse.json({ error: 'Rematch is only available for 2-player games' }, { status: 400 })
+      }
       // A player is requesting a rematch
       const requestingPlayer = session.players.find(p => p.id === playerId)
       if (!requestingPlayer) {
@@ -321,6 +327,9 @@ export async function PATCH(
     }
 
     if (action === 'rematchResponse') {
+      if (session.status !== 'finished') {
+        return NextResponse.json({ error: 'Game is not finished' }, { status: 400 })
+      }
       // A player is responding to a rematch request
       const accepted = parsed.data.accepted ?? false
       const respondingPlayer = session.players.find(p => p.id === playerId)
@@ -395,6 +404,9 @@ export async function PATCH(
     }
 
     if (action === 'rematchCancel') {
+      if (session.status !== 'finished') {
+        return NextResponse.json({ error: 'Game is not finished' }, { status: 400 })
+      }
       // The requester cancelled the rematch request
       const cancellingPlayer = session.players.find(p => p.id === playerId)
 

@@ -43,6 +43,9 @@ export function useGameSync(code: string, onEvent?: GameEventListener) {
   const eventSourceRef = useRef<EventSource | null>(null)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Store onEvent in a ref to avoid SSE reconnection when callback identity changes
+  const onEventRef = useRef(onEvent)
+  onEventRef.current = onEvent
 
   const refreshSession = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session', code] })
@@ -90,8 +93,8 @@ export function useGameSync(code: string, onEvent?: GameEventListener) {
           // Ignore the initial connection confirmation
           if (data.type === 'connected') return
           // Forward event to listener if provided
-          if (onEvent) {
-            onEvent(data)
+          if (onEventRef.current) {
+            onEventRef.current(data)
           }
           // On any game event, refresh session data from the server
           refreshSession()
@@ -114,7 +117,7 @@ export function useGameSync(code: string, onEvent?: GameEventListener) {
       // EventSource constructor failed — fall back to polling
       startPolling()
     }
-  }, [code, refreshSession, startPolling, stopPolling, onEvent])
+  }, [code, refreshSession, startPolling, stopPolling])
 
   useEffect(() => {
     connectSSE()

@@ -341,6 +341,8 @@ export const updatePlayerSchema = z.object({
   manaPoolColors: z.any().optional(),
   handCards: z.any().optional(),
   libraryCards: z.any().optional(),
+  deckId: z.string().optional().nullable(),
+  deckName: z.string().optional().nullable(),
 })
 
 /** DELETE /api/sessions/[code]/player (query params) */
@@ -349,10 +351,53 @@ export const deletePlayerParamsSchema = z.object({
 })
 
 // ============================================
+// CUSTOM SETS
+// ============================================
+
+/** POST /api/custom-sets/upload (form data validation) */
+export const uploadCustomSetSchema = z.object({
+  setName: z.string().min(1, 'Set name is required').max(100).transform(s => s.trim()),
+  setCode: z.string()
+    .max(30)
+    .regex(/^[a-z0-9_]*$/, 'Set code can only contain lowercase letters, numbers, and underscores')
+    .transform(s => {
+      if (!s) return ''
+      return s.startsWith('cus_') ? s : `cus_${s}`
+    })
+    .optional()
+    .nullable()
+    .transform(v => v || ''),
+})
+
+// ============================================
 // AUTH
 // ============================================
 
 /** POST /api/auth/login */
 export const loginSchema = z.object({
+  email: z.string().email('Valid email required'),
   password: z.string().min(1, 'Password required'),
+})
+
+/** POST /api/auth/register */
+export const registerSchema = z.object({
+  email: z.string().email('Valid email required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(1, 'Confirm password required'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+})
+
+/** POST /api/auth/change-password */
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password required'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  confirmNewPassword: z.string().min(1, 'Confirm new password required'),
+}).refine((data) => data.newPassword === data.confirmNewPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmNewPassword'],
+}).refine((data) => data.currentPassword !== data.newPassword, {
+  message: 'New password must be different from current password',
+  path: ['newPassword'],
 })

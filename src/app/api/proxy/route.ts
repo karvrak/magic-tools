@@ -1,15 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { addProxyItemSchema, updateProxyItemSchema, deleteProxyItemParamsSchema } from '@/lib/validations'
+import { getRequestUser, getUserOwnerIds, buildOwnerFilter } from '@/lib/api-auth'
 
 // GET /api/proxy - Get all proxy items (optionally filtered by owner)
 export async function GET(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const { searchParams } = new URL(request.url)
-    const ownerId = searchParams.get('ownerId')
+    const ownerIdParam = searchParams.get('ownerId')
+
+    // Resolve effective where clause for owner scoping
+    let ownerWhere: Record<string, unknown>
+
+    if (ownerIds === null) {
+      // Admin: respect the query param as-is
+      ownerWhere = ownerIdParam ? { ownerId: ownerIdParam } : {}
+    } else {
+      // Regular user: scope to their ownerIds
+      if (ownerIdParam) {
+        if (!ownerIds.includes(ownerIdParam)) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+        ownerWhere = { ownerId: ownerIdParam }
+      } else {
+        ownerWhere = buildOwnerFilter(ownerIds)
+      }
+    }
 
     const items = await prisma.proxyItem.findMany({
-      where: ownerId ? { ownerId } : undefined,
+      where: ownerWhere,
       orderBy: { createdAt: 'desc' },
       include: {
         card: {
@@ -44,6 +66,9 @@ export async function GET(request: NextRequest) {
 // POST /api/proxy - Add item to proxy list
 export async function POST(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const body = await request.json()
     const parsed = addProxyItemSchema.safeParse(body)
     if (!parsed.success) {
@@ -53,6 +78,13 @@ export async function POST(request: NextRequest) {
       )
     }
     const { cardId, quantity, ownerId } = parsed.data
+
+    // For regular users, verify the requested ownerId is within their allowed owners
+    if (ownerIds !== null && ownerId) {
+      if (!ownerIds.includes(ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     // Check if card exists
     const card = await prisma.card.findUnique({ where: { id: cardId } })
@@ -117,6 +149,9 @@ export async function POST(request: NextRequest) {
 // PATCH /api/proxy - Update proxy item quantity
 export async function PATCH(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const body = await request.json()
     const parsed = updateProxyItemSchema.safeParse(body)
     if (!parsed.success) {
@@ -126,6 +161,20 @@ export async function PATCH(request: NextRequest) {
       )
     }
     const { id, quantity } = parsed.data
+
+    // For regular users, verify the item belongs to one of their owners before mutating
+    if (ownerIds !== null) {
+      const existingItem = await prisma.proxyItem.findUnique({
+        where: { id },
+        select: { ownerId: true },
+      })
+      if (!existingItem) {
+        return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+      }
+      if (!existingItem.ownerId || !ownerIds.includes(existingItem.ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     if (quantity <= 0) {
       await prisma.proxyItem.delete({ where: { id } })
@@ -151,15 +200,35 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/proxy - Remove item from proxy list
 export async function DELETE(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
-    // Support "all" to clear entire proxy list
+    // Support "all" to clear entire proxy list, scoped to the user's owners
     if (id === 'all') {
-      const ownerId = searchParams.get('ownerId')
-      await prisma.proxyItem.deleteMany({
-        where: ownerId ? { ownerId } : undefined,
-      })
+      const ownerIdParam = searchParams.get('ownerId')
+
+      if (ownerIds === null) {
+        // Admin: respect the query param as-is
+        await prisma.proxyItem.deleteMany({
+          where: ownerIdParam ? { ownerId: ownerIdParam } : undefined,
+        })
+      } else {
+        // Regular user: if a specific ownerId is given, validate it; otherwise clear all their owners
+        if (ownerIdParam) {
+          if (!ownerIds.includes(ownerIdParam)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+          }
+          await prisma.proxyItem.deleteMany({ where: { ownerId: ownerIdParam } })
+        } else {
+          await prisma.proxyItem.deleteMany({
+            where: buildOwnerFilter(ownerIds),
+          })
+        }
+      }
+
       return NextResponse.json({ success: true })
     }
 
@@ -169,6 +238,20 @@ export async function DELETE(request: NextRequest) {
         { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
+    }
+
+    // For regular users, verify the item belongs to one of their owners before deleting
+    if (ownerIds !== null) {
+      const existingItem = await prisma.proxyItem.findUnique({
+        where: { id: parsed.data.id },
+        select: { ownerId: true },
+      })
+      if (!existingItem) {
+        return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+      }
+      if (!existingItem.ownerId || !ownerIds.includes(existingItem.ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     await prisma.proxyItem.delete({ where: { id: parsed.data.id } })

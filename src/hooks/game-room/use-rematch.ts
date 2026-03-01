@@ -139,12 +139,12 @@ export function useRematch({ code, playerId, onRematchAccepted, onRematchDecline
 
     if (type === 'rematch_request') {
       // Someone requested a rematch
-      if (data.requesterId !== playerId) {
+      if (data.requesterId && data.requesterName && data.requesterId !== playerId) {
         // We received a request from another player
         setRematchState({
           status: 'requesting',
-          requesterId: data.requesterId!,
-          requesterName: data.requesterName!,
+          requesterId: data.requesterId,
+          requesterName: data.requesterName,
         })
       }
     } else if (type === 'rematch_response') {
@@ -158,7 +158,7 @@ export function useRematch({ code, playerId, onRematchAccepted, onRematchDecline
         // Rematch declined
         if (data.responderId !== playerId) {
           // We are the requester, show declined message
-          setRematchState({ status: 'declined', responderName: data.responderName! })
+          setRematchState({ status: 'declined', responderName: data.responderName || 'Opponent' })
           // Reset after 3 seconds
           setTimeout(() => {
             setRematchState({ status: 'idle' })

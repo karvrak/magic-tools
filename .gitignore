@@ -55,5 +55,8 @@ public/swe-worker-*.js
 # Claude Code settings
 .claude/
 
+# Custom sets data (uploaded images)
+data/
+
 # Docker Compose (contains environment-specific config)
 docker-compose.yml

@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
       // Newness filter (new cards / new artworks)
       newness: searchParams.get('newness') as 'new_card' | 'new_art' | 'all_new' | undefined,
       newnessSince: searchParams.get('newnessSince') || undefined,
+      // Custom sets filter
+      customSets: searchParams.get('customSets') === 'true',
     }
 
     // Sort options
@@ -192,6 +194,11 @@ async function handleDeduplicatedSearch(
       })
     }
     whereConditions.push(`"oracleId" IN (${priceOracleIds.map(id => `'${id}'`).join(',')})`)
+  }
+
+  // Custom sets filter
+  if (filters.customSets) {
+    whereConditions.push(`"setCode" LIKE 'cus_%'`)
   }
 
   // Newness filter (new cards / new artworks)

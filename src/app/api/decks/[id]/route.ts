@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getBestPrice } from '@/lib/utils'
 import { updateDeckSchema } from '@/lib/validations'
+import { getRequestUser, getUserOwnerIds, verifyOwnerAccess } from '@/lib/api-auth'
 
 // GET /api/decks/[id] - Get deck with all cards
 export async function GET(
@@ -9,6 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId, role } = await getRequestUser()
     const { id } = await params
 
     const deck = await prisma.deck.findUnique({
@@ -40,6 +42,19 @@ export async function GET(
 
     if (!deck) {
       return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+
+    // Verify the requesting user has access to this deck's owner
+    // A deck with no ownerId is restricted to admins
+    if (deck.ownerId === null) {
+      if (role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else {
+      const allowed = await verifyOwnerAccess(deck.ownerId, userId, role)
+      if (!allowed) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     // Fetch minimum prices per oracleId (cheapest version of each card)
@@ -146,7 +161,28 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId, role } = await getRequestUser()
     const { id } = await params
+
+    // Verify ownership before processing the update
+    const existingDeck = await prisma.deck.findUnique({
+      where: { id },
+      select: { ownerId: true },
+    })
+    if (!existingDeck) {
+      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+    if (existingDeck.ownerId === null) {
+      if (role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else {
+      const allowed = await verifyOwnerAccess(existingDeck.ownerId, userId, role)
+      if (!allowed) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
+
     const body = await request.json()
     const parsed = updateDeckSchema.safeParse(body)
     if (!parsed.success) {
@@ -228,7 +264,27 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId, role } = await getRequestUser()
     const { id } = await params
+
+    // Verify ownership before deleting
+    const existingDeck = await prisma.deck.findUnique({
+      where: { id },
+      select: { ownerId: true },
+    })
+    if (!existingDeck) {
+      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+    if (existingDeck.ownerId === null) {
+      if (role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else {
+      const allowed = await verifyOwnerAccess(existingDeck.ownerId, userId, role)
+      if (!allowed) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     await prisma.deck.delete({
       where: { id },

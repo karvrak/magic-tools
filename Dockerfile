@@ -47,8 +47,8 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy entrypoint script
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
-# Create temp directory for sync operations and set permissions
-RUN mkdir -p /app/temp && \
+# Create temp and data directories, set permissions
+RUN mkdir -p /app/temp /app/data/custom-sets && \
     chmod +x /app/docker-entrypoint.sh && \
     chown -R nextjs:nodejs /app
 

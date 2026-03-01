@@ -12,7 +12,7 @@ import { CardWithPrice } from '@/types/scryfall'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DiceLoader } from '@/components/ui/dice-loader'
-import { ChevronLeft, ChevronRight, Filter, X, Sparkles, Star, Palette, Search as SearchIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Filter, X, Sparkles, Star, Palette, Search as SearchIcon, Package } from 'lucide-react'
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/layout/page-transition'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 
@@ -156,6 +156,8 @@ export function SearchPage() {
     // Newness filter
     if (debouncedFilters.newness) params.set('newness', debouncedFilters.newness)
     if (debouncedFilters.newnessSince) params.set('newnessSince', debouncedFilters.newnessSince)
+    // Custom sets filter
+    if (debouncedFilters.customSets) params.set('customSets', 'true')
 
     return params.toString()
   }, [debouncedFilters, page, pageSize])
@@ -176,7 +178,8 @@ export function SearchPage() {
     filters.priceMinEur !== null ||
     filters.priceMaxEur !== null ||
     filters.keywords.length > 0 ||
-    filters.newness !== null
+    filters.newness !== null ||
+    filters.customSets
   )
 
   // Check if debounced filters are ready for API call
@@ -195,7 +198,8 @@ export function SearchPage() {
     debouncedFilters.priceMinEur !== null ||
     debouncedFilters.priceMaxEur !== null ||
     debouncedFilters.keywords.length > 0 ||
-    debouncedFilters.newness !== null
+    debouncedFilters.newness !== null ||
+    debouncedFilters.customSets
   )
 
   // Fetch newness stats for the tabs
@@ -207,6 +211,19 @@ export function SearchPage() {
       return response.json()
     },
     staleTime: 60 * 1000, // 1 minute
+  })
+
+  // Fetch custom sets count for the tab badge
+  const { data: customSetsCount } = useQuery<{ total: number }>({
+    queryKey: ['custom-sets-count'],
+    queryFn: async () => {
+      const res = await fetch('/api/custom-sets')
+      if (!res.ok) throw new Error('Failed to fetch custom sets')
+      const data = await res.json() as { sets: Array<{ total: number }> }
+      const total = data.sets.reduce((sum: number, s: { total: number }) => sum + s.total, 0)
+      return { total }
+    },
+    staleTime: 60 * 1000,
   })
 
   // Fetch search results with AbortController for request cancellation
@@ -226,7 +243,13 @@ export function SearchPage() {
 
   // Handle newness tab change
   const handleNewnessTabChange = useCallback((newness: NewnessFilter | null) => {
-    setFilters(prev => ({ ...prev, newness }))
+    setFilters(prev => ({ ...prev, newness, customSets: false }))
+    setPage(1)
+  }, [])
+
+  // Handle custom sets tab
+  const handleCustomSetsTab = useCallback(() => {
+    setFilters(prev => ({ ...prev, customSets: !prev.customSets, newness: null }))
     setPage(1)
   }, [])
 
@@ -263,15 +286,15 @@ export function SearchPage() {
         </p>
       </FadeIn>
 
-      {/* Newness Tabs - Show only if there are new items */}
-      {newnessStats && newnessStats.total > 0 && (
+      {/* Filter Tabs */}
+      {((newnessStats && newnessStats.total > 0) || (customSetsCount && customSetsCount.total > 0)) && (
         <FadeIn delay={0.05}>
           <div className="flex flex-wrap gap-2">
             <Button
-              variant={filters.newness === null ? 'default' : 'outline'}
+              variant={filters.newness === null && !filters.customSets ? 'default' : 'outline'}
               size="sm"
-              onClick={() => handleNewnessTabChange(null)}
-              className={filters.newness === null
+              onClick={() => { handleNewnessTabChange(null); setFilters(prev => ({ ...prev, customSets: false })) }}
+              className={filters.newness === null && !filters.customSets
                 ? 'bg-dungeon-700 text-parchment-200 border-dungeon-600'
                 : 'text-parchment-400 hover:text-parchment-200'
               }
@@ -279,51 +302,72 @@ export function SearchPage() {
               <SearchIcon className="w-4 h-4 mr-1.5" />
               All
             </Button>
-            <Button
-              variant={filters.newness === 'all_new' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleNewnessTabChange('all_new')}
-              className={filters.newness === 'all_new'
-                ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white border-emerald-500'
-                : 'text-emerald-400 border-emerald-600/50 hover:bg-emerald-500/10 hover:text-emerald-300'
-              }
-            >
-              <Sparkles className="w-4 h-4 mr-1.5" />
-              New releases
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-emerald-500/20">
-                {newnessStats.total}
-              </span>
-            </Button>
-            <Button
-              variant={filters.newness === 'new_card' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleNewnessTabChange('new_card')}
-              className={filters.newness === 'new_card'
-                ? 'bg-gradient-to-r from-gold-600 to-gold-700 text-white border-gold-500'
-                : 'text-gold-400 border-gold-600/50 hover:bg-gold-500/10 hover:text-gold-300'
-              }
-            >
-              <Star className="w-4 h-4 mr-1.5" />
-              New cards
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-gold-500/20">
-                {newnessStats.newCards}
-              </span>
-            </Button>
-            <Button
-              variant={filters.newness === 'new_art' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleNewnessTabChange('new_art')}
-              className={filters.newness === 'new_art'
-                ? 'bg-gradient-to-r from-violet-600 to-violet-700 text-white border-violet-500'
-                : 'text-violet-400 border-violet-600/50 hover:bg-violet-500/10 hover:text-violet-300'
-              }
-            >
-              <Palette className="w-4 h-4 mr-1.5" />
-              New artworks
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-violet-500/20">
-                {newnessStats.newArt}
-              </span>
-            </Button>
+            {newnessStats && newnessStats.total > 0 && (
+              <>
+                <Button
+                  variant={filters.newness === 'all_new' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleNewnessTabChange('all_new')}
+                  className={filters.newness === 'all_new'
+                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white border-emerald-500'
+                    : 'text-emerald-400 border-emerald-600/50 hover:bg-emerald-500/10 hover:text-emerald-300'
+                  }
+                >
+                  <Sparkles className="w-4 h-4 mr-1.5" />
+                  New releases
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-emerald-500/20">
+                    {newnessStats.total}
+                  </span>
+                </Button>
+                <Button
+                  variant={filters.newness === 'new_card' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleNewnessTabChange('new_card')}
+                  className={filters.newness === 'new_card'
+                    ? 'bg-gradient-to-r from-gold-600 to-gold-700 text-white border-gold-500'
+                    : 'text-gold-400 border-gold-600/50 hover:bg-gold-500/10 hover:text-gold-300'
+                  }
+                >
+                  <Star className="w-4 h-4 mr-1.5" />
+                  New cards
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-gold-500/20">
+                    {newnessStats.newCards}
+                  </span>
+                </Button>
+                <Button
+                  variant={filters.newness === 'new_art' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleNewnessTabChange('new_art')}
+                  className={filters.newness === 'new_art'
+                    ? 'bg-gradient-to-r from-violet-600 to-violet-700 text-white border-violet-500'
+                    : 'text-violet-400 border-violet-600/50 hover:bg-violet-500/10 hover:text-violet-300'
+                  }
+                >
+                  <Palette className="w-4 h-4 mr-1.5" />
+                  New artworks
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-violet-500/20">
+                    {newnessStats.newArt}
+                  </span>
+                </Button>
+              </>
+            )}
+            {customSetsCount && customSetsCount.total > 0 && (
+              <Button
+                variant={filters.customSets ? 'default' : 'outline'}
+                size="sm"
+                onClick={handleCustomSetsTab}
+                className={filters.customSets
+                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-500'
+                  : 'text-purple-400 border-purple-600/50 hover:bg-purple-500/10 hover:text-purple-300'
+                }
+              >
+                <Package className="w-4 h-4 mr-1.5" />
+                Custom Sets
+                <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-purple-500/20">
+                  {customSetsCount.total}
+                </span>
+              </Button>
+            )}
           </div>
         </FadeIn>
       )}

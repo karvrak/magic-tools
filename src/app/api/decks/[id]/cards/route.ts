@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { addDeckCardSchema, updateDeckCardSchema, deleteDeckCardParamsSchema } from '@/lib/validations'
+import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
 
 // POST /api/decks/[id]/cards - Add card to deck
 export async function POST(
@@ -9,6 +10,7 @@ export async function POST(
 ) {
   try {
     const { id: deckId } = await params
+    const { userId, role } = await getRequestUser()
     const body = await request.json()
     const parsed = addDeckCardSchema.safeParse(body)
     if (!parsed.success) {
@@ -28,13 +30,21 @@ export async function POST(
       )
     }
 
-    // Check if deck exists
-    const deck = await prisma.deck.findUnique({ where: { id: deckId } })
+    // Check if deck exists and verify ownership
+    const deck = await prisma.deck.findUnique({ where: { id: deckId }, select: { ownerId: true } })
     if (!deck) {
       return NextResponse.json(
         { error: 'Deck not found' },
         { status: 404 }
       )
+    }
+    if (deck.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deck.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Upsert the card in the deck
@@ -79,6 +89,21 @@ export async function PATCH(
 ) {
   try {
     const { id: deckId } = await params
+    const { userId, role } = await getRequestUser()
+
+    const deckForAuth = await prisma.deck.findUnique({ where: { id: deckId }, select: { ownerId: true } })
+    if (!deckForAuth) {
+      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+    if (deckForAuth.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deckForAuth.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const body = await request.json()
     const parsed = updateDeckCardSchema.safeParse(body)
     if (!parsed.success) {
@@ -134,6 +159,21 @@ export async function DELETE(
 ) {
   try {
     const { id: deckId } = await params
+    const { userId, role } = await getRequestUser()
+
+    const deckForAuth = await prisma.deck.findUnique({ where: { id: deckId }, select: { ownerId: true } })
+    if (!deckForAuth) {
+      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+    if (deckForAuth.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deckForAuth.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const parsed = deleteDeckCardParamsSchema.safeParse({
       cardId: searchParams.get('cardId'),

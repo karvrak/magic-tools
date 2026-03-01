@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { changeCardEditionSchema } from '@/lib/validations'
+import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
 
 // PATCH /api/decks/[id]/cards/edition - Change card edition in deck
 export async function PATCH(
@@ -9,6 +10,21 @@ export async function PATCH(
 ) {
   try {
     const { id: deckId } = await params
+    const { userId, role } = await getRequestUser()
+
+    const deck = await prisma.deck.findUnique({ where: { id: deckId }, select: { ownerId: true } })
+    if (!deck) {
+      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+    if (deck.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deck.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const body = await request.json()
     const parsed = changeCardEditionSchema.safeParse(body)
     if (!parsed.success) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
 
 // POST /api/decks/[id]/duplicate - Duplicate a deck
 export async function POST(
@@ -8,6 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    const { userId, role } = await getRequestUser()
     const body = await request.json()
     const { name } = body
 
@@ -28,6 +30,15 @@ export async function POST(
 
     if (!originalDeck) {
       return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+
+    if (originalDeck.ownerId) {
+      const hasAccess = await verifyOwnerAccess(originalDeck.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Create the new deck with status "building"

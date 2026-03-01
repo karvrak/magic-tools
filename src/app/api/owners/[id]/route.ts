@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { updateOwnerSchema } from '@/lib/validations'
+import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
 
 // DELETE /api/owners/[id] - Delete an owner (keeps associated decks)
 export async function DELETE(
@@ -9,6 +10,16 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    const { userId, role } = await getRequestUser()
+
+    // Verify the requesting user owns this owner record
+    const hasAccess = await verifyOwnerAccess(id, userId, role)
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: 'Forbidden: you do not have access to this owner' },
+        { status: 403 }
+      )
+    }
 
     // Check if owner exists
     const owner = await prisma.owner.findUnique({
@@ -52,6 +63,17 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
+    const { userId, role } = await getRequestUser()
+
+    // Verify the requesting user owns this owner record
+    const hasAccess = await verifyOwnerAccess(id, userId, role)
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: 'Forbidden: you do not have access to this owner' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const parsed = updateOwnerSchema.safeParse(body)
     if (!parsed.success) {
@@ -62,10 +84,10 @@ export async function PATCH(
     }
     const { name, color, isDefault } = parsed.data
 
-    // If setting as default, unset other defaults first
+    // If setting as default, unset other defaults scoped to this user only
     if (isDefault === true) {
       await prisma.owner.updateMany({
-        where: { isDefault: true },
+        where: { isDefault: true, userId },
         data: { isDefault: false },
       })
     }

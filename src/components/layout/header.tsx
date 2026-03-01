@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Layers, Heart, Menu, X, LogOut, Scroll, Sparkles, HelpCircle, Swords, Zap, ChevronDown, Hammer, Check, Users, User, UsersRound, Archive, Package, ScrollText, TrendingUp, Printer } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { Search, Layers, Heart, Menu, X, LogOut, Scroll, Sparkles, HelpCircle, Swords, Zap, ChevronDown, Hammer, Check, Users, User, UsersRound, Archive, Package, ScrollText, TrendingUp, Printer, UserCircle } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { QuickSearch } from '@/components/search/quick-search'
 import { useQuickAdd } from '@/contexts/quick-add'
 import { useActiveOwner } from '@/contexts/active-owner'
+import { useAuthUser } from '@/contexts/auth-user'
 import {
   Tooltip,
   TooltipContent,
@@ -17,17 +18,29 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-const navItems = [
-  { href: '/', label: 'Arcane Search', icon: Search, description: 'Explore the library', iconOnly: true },
-  { href: '/decks', label: 'Spellbooks', icon: Layers, description: 'Your deck collection' },
-  { href: '/sealed', label: 'Sealed', icon: Package, description: 'Limited format simulation' },
-  { href: '/play', label: 'Multiplayer', icon: Users, description: 'Play with friends' },
-  { href: '/battle', label: 'Arena', icon: Swords, description: 'Life counter & battles' },
-  { href: '/matches', label: 'History', icon: ScrollText, description: 'Match history & stats' },
-  { href: '/collection', label: 'Collection', icon: Archive, description: 'Cards & wishlist' },
-  { href: '/proxy', label: 'Proxy', icon: Printer, description: 'Print proxy cards' },
-  { href: '/analytics', label: 'Analytics', icon: TrendingUp, description: 'Collection insights' },
-  { href: '/help', label: 'Tome of Knowledge', icon: HelpCircle, description: 'Help & shortcuts' },
+type NavRole = 'all' | 'admin'
+
+interface NavItem {
+  href: string
+  label: string
+  icon: typeof Search
+  description: string
+  iconOnly?: boolean
+  roles: NavRole
+}
+
+const navItems: NavItem[] = [
+  { href: '/', label: 'Arcane Search', icon: Search, description: 'Explore the library', iconOnly: true, roles: 'all' },
+  { href: '/decks', label: 'Spellbooks', icon: Layers, description: 'Your deck collection', roles: 'all' },
+  { href: '/sealed', label: 'Sealed', icon: Package, description: 'Limited format simulation', roles: 'admin' },
+  { href: '/play', label: 'Multiplayer', icon: Users, description: 'Play with friends', roles: 'admin' },
+  { href: '/battle', label: 'Arena', icon: Swords, description: 'Life counter & battles', roles: 'admin' },
+  { href: '/matches', label: 'History', icon: ScrollText, description: 'Match history & stats', roles: 'admin' },
+  { href: '/collection', label: 'Collection', icon: Archive, description: 'Cards & wishlist', roles: 'all' },
+  { href: '/proxy', label: 'Proxy', icon: Printer, description: 'Print proxy cards', roles: 'admin' },
+  { href: '/analytics', label: 'Analytics', icon: TrendingUp, description: 'Collection insights', roles: 'admin' },
+  { href: '/profiles', label: 'Profiles', icon: UserCircle, description: 'Manage your profiles', roles: 'all' },
+  { href: '/help', label: 'Tome of Knowledge', icon: HelpCircle, description: 'Help & shortcuts', roles: 'all' },
 ]
 
 export function Header() {
@@ -39,6 +52,16 @@ export function Header() {
   const ownerRef = useRef<HTMLDivElement>(null)
   const { activeTarget, activeDeck, availableDecks, setActiveDeckById, setActiveCollection, isLoading: quickAddLoading, refreshDecks } = useQuickAdd()
   const { activeOwner, owners, setActiveOwnerById, isLoading: ownerLoading, refreshOwners } = useActiveOwner()
+  const { user, isAdmin } = useAuthUser()
+
+  // Filter nav items based on user role
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter((item) => {
+      if (item.roles === 'all') return true
+      if (item.roles === 'admin') return isAdmin
+      return true
+    })
+  }, [isAdmin])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -112,7 +135,7 @@ export function Header() {
 
           {/* Desktop Nav - Tavern Menu Style */}
           <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item, index) => {
+            {filteredNavItems.map((item, index) => {
               const isActive = pathname === item.href
               return (
                 <motion.div
@@ -542,7 +565,7 @@ export function Header() {
               className="md:hidden overflow-hidden"
             >
               <div className="py-4 border-t border-dungeon-700 space-y-1">
-                {navItems.map((item, index) => {
+                {filteredNavItems.map((item, index) => {
                   const isActive = pathname === item.href
                   return (
                     <motion.div
@@ -589,7 +612,7 @@ export function Header() {
                 <motion.div
                   initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: navItems.length * 0.1 }}
+                  transition={{ delay: filteredNavItems.length * 0.1 }}
                   className="px-4 py-2"
                 >
                   <p className="text-xs text-parchment-500 mb-2 px-1">Active user</p>
@@ -650,7 +673,7 @@ export function Header() {
                 <motion.div
                   initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: (navItems.length + 1) * 0.1 }}
+                  transition={{ delay: (filteredNavItems.length + 1) * 0.1 }}
                   className="px-4 py-2"
                 >
                   <p className="text-xs text-parchment-500 mb-2 px-1">
@@ -730,7 +753,7 @@ export function Header() {
                 <motion.button
                   initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: (navItems.length + 2) * 0.1 }}
+                  transition={{ delay: (filteredNavItems.length + 2) * 0.1 }}
                   onClick={handleLogout}
                   className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-dragon-400 hover:bg-dragon-600/10 transition-all"
                 >

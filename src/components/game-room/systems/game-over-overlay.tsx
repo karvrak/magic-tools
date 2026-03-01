@@ -41,7 +41,6 @@ export function GameOverOverlay({
   onLeave,
 }: GameOverOverlayProps) {
   const isWinner = winner?.id === currentPlayerId
-  const currentPlayer = players.find(p => p.id === currentPlayerId)
 
   // Check if we are the one receiving a rematch request
   const isReceivingRequest = rematchState.status === 'requesting' && rematchState.requesterId !== currentPlayerId

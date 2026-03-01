@@ -279,12 +279,13 @@ export function useGameActions(
   const graveyardToLibraryTop = useCallback((index: number) => {
     const card = graveyard[index]
     if (!card) return
+    pushUndoSnapshot()
     setGraveyard(prev => prev.filter((_, i) => i !== index))
     setLibrary(prev => [card, ...prev])
     if (gameLog && currentPlayer) {
       gameLog.addActionLog(currentPlayer.name, currentPlayer.color, `puts ${card.printedName || card.name || 'Unknown'} on top of library`)
     }
-  }, [graveyard, setGraveyard, setLibrary, gameLog, currentPlayer])
+  }, [graveyard, setGraveyard, setLibrary, gameLog, currentPlayer, pushUndoSnapshot])
 
   // Start of turn - untap all, reset mana, draw, advance through phases
   const handleStartTurn = useCallback(() => {

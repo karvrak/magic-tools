@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
 
 const XAI_API_KEY = process.env.XAI_API_KEY
 
@@ -50,9 +51,24 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { userId, role } = await getRequestUser()
 
     if (!XAI_API_KEY) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
+    }
+
+    // Verify ownership before fetching full deck data
+    const deckForAuth = await prisma.deck.findUnique({ where: { id }, select: { ownerId: true } })
+    if (!deckForAuth) {
+      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+    if (deckForAuth.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deckForAuth.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Get deck with cards
