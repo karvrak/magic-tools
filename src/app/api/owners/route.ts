@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { createOwnerSchema } from '@/lib/validations'
+import { getRequestUser, getUserOwnerIds } from '@/lib/api-auth'
 
-// GET /api/owners - List all owners
+// GET /api/owners - List owners belonging to the requesting user
 export async function GET() {
   try {
+    const { userId } = await getRequestUser()
+
+    // Always scope to the requesting user's owners (admin included)
+    const whereClause = { userId }
+
     const owners = await prisma.owner.findMany({
+      where: whereClause,
       orderBy: [
         { isDefault: 'desc' }, // Default owner first
         { name: 'asc' },
@@ -35,9 +42,11 @@ export async function GET() {
   }
 }
 
-// POST /api/owners - Create a new owner
+// POST /api/owners - Create a new owner (scoped to the requesting user)
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await getRequestUser()
+
     const body = await request.json()
     const parsed = createOwnerSchema.safeParse(body)
     if (!parsed.success) {
@@ -48,9 +57,9 @@ export async function POST(request: NextRequest) {
     }
     const { name, color } = parsed.data
 
-    // Check if owner already exists
+    // Check uniqueness scoped to this user (@@unique([userId, name]))
     const existing = await prisma.owner.findUnique({
-      where: { name: name.trim() },
+      where: { userId_name: { userId, name: name.trim() } },
     })
 
     if (existing) {
@@ -64,6 +73,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         color: color || '#D4AF37',
+        userId,
       },
     })
 

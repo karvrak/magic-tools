@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { joinSessionSchema, updateSessionSchema } from '@/lib/validations'
 import { broadcastGameEvent } from '@/lib/game-room/event-emitter'
@@ -296,6 +297,124 @@ export async function PATCH(
           emoteId: parsed.data.emoteId,
           playerName: parsed.data.playerName,
           playerColor: parsed.data.playerColor,
+        },
+      })
+      return NextResponse.json({ success: true })
+    }
+
+    if (action === 'rematch') {
+      if (session.status !== 'finished') {
+        return NextResponse.json({ error: 'Game is not finished' }, { status: 400 })
+      }
+      if (session.players.length > 2) {
+        return NextResponse.json({ error: 'Rematch is only available for 2-player games' }, { status: 400 })
+      }
+      // A player is requesting a rematch
+      const requestingPlayer = session.players.find(p => p.id === playerId)
+      if (!requestingPlayer) {
+        return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+      }
+
+      broadcastGameEvent(code.toUpperCase(), {
+        type: 'rematch_request',
+        data: {
+          requesterId: playerId,
+          requesterName: requestingPlayer.name,
+          requesterColor: requestingPlayer.color,
+        },
+      })
+      return NextResponse.json({ success: true })
+    }
+
+    if (action === 'rematchResponse') {
+      if (session.status !== 'finished') {
+        return NextResponse.json({ error: 'Game is not finished' }, { status: 400 })
+      }
+      // A player is responding to a rematch request
+      const accepted = parsed.data.accepted ?? false
+      const respondingPlayer = session.players.find(p => p.id === playerId)
+
+      if (!respondingPlayer) {
+        return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+      }
+
+      if (accepted) {
+        // Reset the game for a rematch
+        // Reset all players to initial state
+        await prisma.gamePlayer.updateMany({
+          where: { sessionId: session.id },
+          data: {
+            life: session.startingLife,
+            manaPool: 0,
+            poisonCounters: 0,
+            commanderDamage: {},
+            manaPoolColors: { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 },
+            handCount: 0,
+            libraryCount: 0,
+            graveyardCount: 0,
+            exileCount: 0,
+            battlefieldCount: 0,
+            battlefieldCards: [],
+            graveyardCards: [],
+            exileCards: [],
+            handCards: Prisma.JsonNull,
+            libraryCards: Prisma.JsonNull,
+            isEliminated: false,
+            isReady: false,
+          },
+        })
+
+        // Reset session state - go back to waiting/lobby
+        const updatedSession = await prisma.gameSession.update({
+          where: { id: session.id },
+          data: {
+            status: 'waiting',
+            currentTurn: 0,
+            activePlayerId: null,
+            currentPhase: null,
+            startedAt: null,
+            finishedAt: null,
+          },
+          include: { players: { orderBy: { playerOrder: 'asc' } } },
+        })
+
+        broadcastGameEvent(code.toUpperCase(), {
+          type: 'rematch_response',
+          data: {
+            accepted: true,
+            responderId: playerId,
+            responderName: respondingPlayer.name,
+            session: updatedSession,
+          },
+        })
+
+        return NextResponse.json({ session: updatedSession, rematchAccepted: true })
+      } else {
+        // Rematch declined - notify all players
+        broadcastGameEvent(code.toUpperCase(), {
+          type: 'rematch_response',
+          data: {
+            accepted: false,
+            responderId: playerId,
+            responderName: respondingPlayer.name,
+          },
+        })
+        return NextResponse.json({ success: true, rematchAccepted: false })
+      }
+    }
+
+    if (action === 'rematchCancel') {
+      if (session.status !== 'finished') {
+        return NextResponse.json({ error: 'Game is not finished' }, { status: 400 })
+      }
+      // The requester cancelled the rematch request
+      const cancellingPlayer = session.players.find(p => p.id === playerId)
+
+      broadcastGameEvent(code.toUpperCase(), {
+        type: 'rematch_cancelled',
+        data: {
+          cancellerId: playerId,
+          cancellerName: cancellingPlayer?.name,
         },
       })
       return NextResponse.json({ success: true })

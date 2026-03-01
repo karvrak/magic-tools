@@ -722,13 +722,22 @@ export function CardDetailModal({
             {/* Main Card Image - Smaller on mobile */}
             <div className="relative aspect-[488/680] rounded-lg overflow-hidden bg-dungeon-800 max-w-[200px] sm:max-w-none mx-auto sm:mx-0">
               {displayImage ? (
-                <Image
-                  src={displayImage}
-                  alt={card.name}
-                  fill
-                  className="object-contain"
-                  priority
-                />
+                displayImage.startsWith('/api/custom-sets/') ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={displayImage}
+                    alt={card.name}
+                    className="absolute inset-0 w-full h-full object-contain"
+                  />
+                ) : (
+                  <Image
+                    src={displayImage}
+                    alt={card.name}
+                    fill
+                    className="object-contain"
+                    priority
+                  />
+                )
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-dungeon-500">
                   No image
@@ -794,13 +803,22 @@ export function CardDetailModal({
                         title={`${version.setName} (${version.setCode.toUpperCase()})`}
                       >
                         {version.imageSmall || version.imageNormal ? (
-                          <Image
-                            src={version.imageSmall || version.imageNormal!}
-                            alt={`${version.name} - ${version.setCode}`}
-                            fill
-                            className="object-cover"
-                            sizes="60px"
-                          />
+                          (version.imageSmall || version.imageNormal!).startsWith('/api/custom-sets/') ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={version.imageSmall || version.imageNormal!}
+                              alt={`${version.name} - ${version.setCode}`}
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Image
+                              src={version.imageSmall || version.imageNormal!}
+                              alt={`${version.name} - ${version.setCode}`}
+                              fill
+                              className="object-cover"
+                              sizes="60px"
+                            />
+                          )
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center text-[8px] text-dungeon-500">
                             ?
@@ -850,13 +868,22 @@ export function CardDetailModal({
                         title={`${frameLabel ? `[${frameLabel}] ` : ''}${version.setCode.toUpperCase()}`}
                       >
                         {version.imageSmall || version.imageNormal ? (
-                          <Image
-                            src={version.imageSmall || version.imageNormal!}
-                            alt={`${version.name} - ${version.setCode}`}
-                            fill
-                            className="object-cover"
-                            sizes="60px"
-                          />
+                          (version.imageSmall || version.imageNormal!).startsWith('/api/custom-sets/') ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={version.imageSmall || version.imageNormal!}
+                              alt={`${version.name} - ${version.setCode}`}
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Image
+                              src={version.imageSmall || version.imageNormal!}
+                              alt={`${version.name} - ${version.setCode}`}
+                              fill
+                              className="object-cover"
+                              sizes="60px"
+                            />
+                          )
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center text-[8px] text-dungeon-500">
                             ?

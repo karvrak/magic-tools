@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
 
 interface AddedCard {
   cardId: string
@@ -15,6 +16,7 @@ export async function POST(
 ) {
   try {
     const { id: deckId } = await params
+    const { userId, role } = await getRequestUser()
 
     // Fetch deck with cards
     const deck = await prisma.deck.findUnique({
@@ -45,6 +47,15 @@ export async function POST(
 
     if (!deck) {
       return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+
+    if (deck.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deck.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Aggregate deck needs by cardId (a card can appear in multiple categories)

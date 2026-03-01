@@ -5,6 +5,29 @@ import { useQueryClient } from '@tanstack/react-query'
 
 export type ConnectionStatus = 'sse' | 'polling' | 'disconnected'
 
+export type GameEventType =
+  | 'connected'
+  | 'state_update'
+  | 'player_update'
+  | 'phase_change'
+  | 'game_start'
+  | 'game_end'
+  | 'response_alert'
+  | 'emote'
+  | 'log_entry'
+  | 'rematch_request'
+  | 'rematch_response'
+  | 'rematch_cancelled'
+
+export interface GameEvent {
+  type: GameEventType
+  sessionCode: string
+  data: unknown
+  timestamp: number
+}
+
+export type GameEventListener = (event: GameEvent) => void
+
 const POLLING_INTERVAL_MS = 1500
 const SSE_RETRY_DELAY_MS = 5000
 
@@ -13,13 +36,16 @@ const SSE_RETRY_DELAY_MS = 5000
  * fallback to polling. Returns the current connection status and a
  * manual refresh function.
  */
-export function useGameSync(code: string) {
+export function useGameSync(code: string, onEvent?: GameEventListener) {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>('disconnected')
   const queryClient = useQueryClient()
   const eventSourceRef = useRef<EventSource | null>(null)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Store onEvent in a ref to avoid SSE reconnection when callback identity changes
+  const onEventRef = useRef(onEvent)
+  onEventRef.current = onEvent
 
   const refreshSession = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session', code] })
@@ -63,9 +89,13 @@ export function useGameSync(code: string) {
 
       es.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data)
+          const data = JSON.parse(event.data) as GameEvent
           // Ignore the initial connection confirmation
           if (data.type === 'connected') return
+          // Forward event to listener if provided
+          if (onEventRef.current) {
+            onEventRef.current(data)
+          }
           // On any game event, refresh session data from the server
           refreshSession()
         } catch {

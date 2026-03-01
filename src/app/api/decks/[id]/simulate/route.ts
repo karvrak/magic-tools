@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { simulateDeckSchema } from '@/lib/validations'
+import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
 
 // ============================================
 // INTERFACES
@@ -782,6 +783,21 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    const { userId, role } = await getRequestUser()
+
+    // Verify ownership before running simulation
+    const deckForAuth = await prisma.deck.findUnique({ where: { id }, select: { ownerId: true } })
+    if (!deckForAuth) {
+      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+    if (deckForAuth.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deckForAuth.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     let advanced = false
     try {
@@ -793,7 +809,7 @@ export async function POST(
     } catch {
       // Default to basic mode
     }
-    
+
     const deck = await prisma.deck.findUnique({
       where: { id },
       include: {
@@ -948,6 +964,20 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { userId, role } = await getRequestUser()
+
+    const deckForAuth = await prisma.deck.findUnique({ where: { id }, select: { ownerId: true } })
+    if (!deckForAuth) {
+      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+    if (deckForAuth.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deckForAuth.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const simulation = await prisma.deckSimulation.findFirst({
       where: { deckId: id },

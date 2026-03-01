@@ -5,6 +5,7 @@ import {
   Package,
   Sparkles,
   BookOpen,
+  Puzzle,
   ArrowRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,19 @@ export function SetSelection({
         <ArrowRight className="w-4 h-4 text-emerald-400" />
       </Link>
 
+      {/* Link to custom sets */}
+      <Link
+        href="/sealed/custom"
+        className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-purple-900/20 border border-purple-600/30 hover:bg-purple-900/30 transition-colors"
+      >
+        <Puzzle className="w-5 h-5 text-purple-400" />
+        <div className="flex-1">
+          <p className="text-purple-400 font-medium text-sm">Custom sets</p>
+          <p className="text-parchment-500 text-xs">Upload and play with your own extensions</p>
+        </div>
+        <ArrowRight className="w-4 h-4 text-purple-400" />
+      </Link>
+
       <h2 className="font-medieval text-lg text-gold-400 mb-4">Sealed Simulator</h2>
       <p className="text-parchment-500 text-sm mb-4">Simulate opening boosters from any set.</p>
 
@@ -62,7 +76,7 @@ export function SetSelection({
             <option value="">-- Select --</option>
             {sets?.map((set) => (
               <option key={set.setCode} value={set.setCode}>
-                {set.setName} ({set.setCode.toUpperCase()})
+                {set.setCode.startsWith('cus_') ? '\u2728 ' : ''}{set.setName} ({set.setCode.toUpperCase()})
               </option>
             ))}
           </select>

@@ -111,4 +111,7 @@ export interface GameRoomProps {
   onNextTurn: () => void
   onSetReady: (ready: boolean) => void
   gamePhase: 'lobby' | 'playing' | 'finished'
+  decks?: { id: string; name: string }[]
+  selectedDeckId?: string
+  onSelectDeck?: (deckId: string) => void
 }

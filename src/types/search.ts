@@ -31,6 +31,8 @@ export interface SearchFilters {
   // Newness filter (new cards / new artworks from recent syncs)
   newness: NewnessFilter | null
   newnessSince: string | null // ISO date string
+  // Custom sets filter
+  customSets: boolean
 }
 
 export const defaultSearchFilters: SearchFilters = {
@@ -53,6 +55,7 @@ export const defaultSearchFilters: SearchFilters = {
   keywords: [],
   newness: null,
   newnessSince: null,
+  customSets: false,
 }
 
 export const MTG_COLORS = [

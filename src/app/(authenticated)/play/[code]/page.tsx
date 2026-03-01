@@ -20,7 +20,8 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { GameRoom } from '@/components/game-room/game-room'
 import { GameOverOverlay } from '@/components/game-room/systems/game-over-overlay'
-import { useGameSync, ConnectionStatus } from '@/hooks/game-room/use-game-sync'
+import { useGameSync, ConnectionStatus, GameEvent } from '@/hooks/game-room/use-game-sync'
+import { useRematch } from '@/hooks/game-room/use-rematch'
 import { CardWithPrice } from '@/types/scryfall'
 
 interface DeckCard {
@@ -76,6 +77,12 @@ interface GameSession {
   finishedAt: string | null
 }
 
+interface DeckListItem {
+  id: string
+  name: string
+  format: string | null
+}
+
 interface DeckDetail {
   id: string
   name: string
@@ -104,12 +111,40 @@ function GameSessionContent({ code }: { code: string }) {
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  
+
   const playerId = searchParams.get('playerId')
   const [copied, setCopied] = useState(false)
+  const [selectedDeckId, setSelectedDeckId] = useState<string | undefined>(undefined)
+
+  // Rematch system
+  const {
+    rematchState,
+    requestRematch,
+    cancelRematch,
+    acceptRematch,
+    declineRematch,
+    handleRematchEvent,
+    resetState: resetRematchState,
+  } = useRematch({
+    code,
+    playerId: playerId || '',
+    onRematchAccepted: () => {
+      toast({ title: 'Rematch accepted!', description: 'Starting new game...' })
+    },
+    onRematchDeclined: () => {
+      // Optional: can show toast here
+    },
+  })
+
+  // Handle SSE events including rematch events
+  const handleGameEvent = useCallback((event: GameEvent) => {
+    if (event.type === 'rematch_request' || event.type === 'rematch_response' || event.type === 'rematch_cancelled') {
+      handleRematchEvent({ type: event.type, data: event.data as Record<string, unknown> })
+    }
+  }, [handleRematchEvent])
 
   // SSE-based real-time sync with automatic polling fallback
-  const { connectionStatus } = useGameSync(code)
+  const { connectionStatus } = useGameSync(code, handleGameEvent)
 
   // Fetch session data — SSE triggers invalidation, no polling needed
   const { data: sessionData, isLoading: sessionLoading, error: sessionError } = useQuery<{ session: GameSession }>({
@@ -121,10 +156,27 @@ function GameSessionContent({ code }: { code: string }) {
     },
   })
 
+  // Fetch available decks for lobby deck selection
+  const { data: decksData } = useQuery<{ decks: DeckListItem[] }>({
+    queryKey: ['decks'],
+    queryFn: async () => {
+      const response = await fetch('/api/decks')
+      if (!response.ok) throw new Error('Failed to fetch decks')
+      return response.json()
+    },
+  })
+
   const session = sessionData?.session
   const currentPlayer = session?.players.find(p => p.id === playerId)
   const isHost = currentPlayer?.isHost
   const isMyTurn = session?.activePlayerId === playerId
+
+  // Initialize selectedDeckId from server state
+  useEffect(() => {
+    if (currentPlayer?.deckId && selectedDeckId === undefined) {
+      setSelectedDeckId(currentPlayer.deckId)
+    }
+  }, [currentPlayer?.deckId, selectedDeckId])
 
   // Fetch my deck if I have one
   const { data: deckData } = useQuery<{ deck: DeckDetail }>({
@@ -186,18 +238,13 @@ function GameSessionContent({ code }: { code: string }) {
   // Abandon game mutation
   const abandonMutation = useMutation({
     mutationFn: async () => {
-      // Mark player as eliminated
-      await fetch(`/api/sessions/${code}/player`, {
+      // Mark player as eliminated — the player route handles game-end detection automatically
+      const response = await fetch(`/api/sessions/${code}/player`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, isEliminated: true, life: 0 }),
       })
-      // Check if game should end
-      const response = await fetch(`/api/sessions/${code}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'nextTurn', playerId }),
-      })
+      if (!response.ok) throw new Error('Failed to abandon')
       return response.json()
     },
     onSuccess: () => {
@@ -224,14 +271,28 @@ function GameSessionContent({ code }: { code: string }) {
     sessionActionMutation.mutate('nextTurn')
   }, [sessionActionMutation])
 
-  // Handle set ready
+  // Handle set ready (block if no deck selected)
   const handleSetReady = useCallback((ready: boolean) => {
+    if (ready && !selectedDeckId) {
+      toast({ title: 'Select a deck', description: 'You must select a deck before readying up', variant: 'destructive' })
+      return
+    }
     updatePlayerMutation.mutate({ isReady: ready })
-  }, [updatePlayerMutation])
+  }, [updatePlayerMutation, selectedDeckId, toast])
+
+  // Handle deck selection in lobby
+  const handleSelectDeck = useCallback((deckId: string) => {
+    const deck = decksData?.decks.find(d => d.id === deckId)
+    setSelectedDeckId(deckId)
+    updatePlayerMutation.mutate({
+      deckId,
+      deckName: deck?.name || null,
+    } as Partial<GamePlayer>)
+  }, [decksData, updatePlayerMutation])
 
   // Auto-start game when all players ready (with small delay for countdown sync)
   const allPlayersReady = session?.players && session.players.length >= 2 && session.players.every(p => p.isReady)
-  
+
   useEffect(() => {
     if (allPlayersReady && session?.status === 'waiting' && isHost) {
       // Host triggers the game start after 3.5 seconds (to account for countdown)
@@ -241,6 +302,13 @@ function GameSessionContent({ code }: { code: string }) {
       return () => clearTimeout(timer)
     }
   }, [allPlayersReady, session?.status, isHost, sessionActionMutation])
+
+  // Reset rematch state when session goes back to waiting (after rematch accepted)
+  useEffect(() => {
+    if (session?.status === 'waiting') {
+      resetRematchState()
+    }
+  }, [session?.status, resetRematchState])
 
   if (sessionLoading) {
     return (
@@ -424,17 +492,25 @@ function GameSessionContent({ code }: { code: string }) {
           onNextTurn={handleNextTurn}
           onSetReady={handleSetReady}
           gamePhase={gamePhase}
+          decks={decksData?.decks?.map(d => ({ id: d.id, name: d.name }))}
+          selectedDeckId={selectedDeckId}
+          onSelectDeck={handleSelectDeck}
         />
       )}
 
-      {/* Game Over Overlay - shown for finished games OR when any player is eliminated */}
+      {/* Game Over Overlay */}
       <GameOverOverlay
-        isVisible={session.status === 'finished' || session.players.filter(p => !p.isEliminated).length <= 1}
+        isVisible={session.status === 'finished'}
         winner={session.players.find(p => !p.isEliminated) || null}
         currentPlayerId={playerId || ''}
         players={session.players}
+        rematchState={rematchState}
+        onRematch={requestRematch}
+        onRematchAccept={acceptRematch}
+        onRematchDecline={declineRematch}
+        onRematchCancel={cancelRematch}
         onNewGame={() => router.push('/play')}
-        onLeave={() => leaveMutation.mutate()}
+        onLeave={() => router.push('/')}
       />
     </div>
   )

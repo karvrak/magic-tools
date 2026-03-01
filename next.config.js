@@ -37,6 +37,12 @@ const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
+    proxyClientMaxBodySize: '100mb',
+  },
   images: {
     remotePatterns: [
       {

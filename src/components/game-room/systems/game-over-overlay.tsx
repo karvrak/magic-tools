@@ -1,17 +1,28 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Trophy, Skull, RotateCcw, Home, Flag } from 'lucide-react'
+import { Trophy, Skull, RotateCcw, Home, Flag, Loader2, X, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { GamePlayer } from '@/lib/game-room/types'
+
+export type RematchState =
+  | { status: 'idle' }
+  | { status: 'requesting'; requesterId: string; requesterName: string }
+  | { status: 'waiting_response'; timeLeft: number }
+  | { status: 'declined'; responderName: string }
+  | { status: 'cancelled' }
 
 interface GameOverOverlayProps {
   isVisible: boolean
   winner: GamePlayer | null
   currentPlayerId: string
   players: GamePlayer[]
+  rematchState?: RematchState
   onRematch?: () => void
+  onRematchAccept?: () => void
+  onRematchDecline?: () => void
+  onRematchCancel?: () => void
   onNewGame?: () => void
   onLeave?: () => void
 }
@@ -21,12 +32,20 @@ export function GameOverOverlay({
   winner,
   currentPlayerId,
   players,
+  rematchState = { status: 'idle' },
   onRematch,
+  onRematchAccept,
+  onRematchDecline,
+  onRematchCancel,
   onNewGame,
   onLeave,
 }: GameOverOverlayProps) {
   const isWinner = winner?.id === currentPlayerId
-  const currentPlayer = players.find(p => p.id === currentPlayerId)
+
+  // Check if we are the one receiving a rematch request
+  const isReceivingRequest = rematchState.status === 'requesting' && rematchState.requesterId !== currentPlayerId
+  // Check if we are waiting for response (we sent the request)
+  const isWaitingForResponse = rematchState.status === 'waiting_response'
 
   return (
     <AnimatePresence>
@@ -158,7 +177,75 @@ export function GameOverOverlay({
               transition={{ delay: 0.6 }}
               className="px-6 pb-6 space-y-3"
             >
-              {onRematch && (
+              {/* Rematch request received - show accept/decline */}
+              {isReceivingRequest && rematchState.status === 'requesting' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-arcane-500/20 border border-arcane-500/30">
+                    <Clock className="w-5 h-5 text-arcane-400 animate-pulse" />
+                    <span className="text-parchment-200">
+                      <span className="font-semibold text-arcane-400">{rematchState.requesterName}</span>
+                      {' '}wants a rematch!
+                    </span>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={onRematchAccept}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+                      size="lg"
+                    >
+                      <RotateCcw className="w-5 h-5 mr-2" />
+                      Accept
+                    </Button>
+                    <Button
+                      onClick={onRematchDecline}
+                      variant="outline"
+                      className="flex-1 text-dragon-400 border-dragon-500/30 hover:bg-dragon-500/10"
+                      size="lg"
+                    >
+                      <X className="w-5 h-5 mr-2" />
+                      Decline
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Waiting for opponent response */}
+              {isWaitingForResponse && rematchState.status === 'waiting_response' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-gold-500/20 border border-gold-500/30">
+                    <Loader2 className="w-5 h-5 text-gold-400 animate-spin" />
+                    <span className="text-parchment-200">
+                      Waiting for opponent...
+                    </span>
+                    <span className="text-gold-400 font-mono font-bold">
+                      {rematchState.timeLeft}s
+                    </span>
+                  </div>
+                  <Button
+                    onClick={onRematchCancel}
+                    variant="outline"
+                    className="w-full text-parchment-400"
+                    size="lg"
+                  >
+                    <X className="w-5 h-5 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              )}
+
+              {/* Rematch was declined */}
+              {rematchState.status === 'declined' && (
+                <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-dragon-500/20 border border-dragon-500/30 mb-3">
+                  <X className="w-5 h-5 text-dragon-400" />
+                  <span className="text-parchment-200">
+                    <span className="font-semibold text-dragon-400">{rematchState.responderName}</span>
+                    {' '}declined the rematch
+                  </span>
+                </div>
+              )}
+
+              {/* Normal state - show rematch button */}
+              {rematchState.status === 'idle' && onRematch && (
                 <Button
                   onClick={onRematch}
                   className="w-full bg-gold-600 hover:bg-gold-500 text-dungeon-900 font-semibold"
@@ -168,29 +255,33 @@ export function GameOverOverlay({
                   Rematch
                 </Button>
               )}
-              <div className="flex gap-3">
-                {onNewGame && (
-                  <Button
-                    onClick={onNewGame}
-                    variant="outline"
-                    className="flex-1"
-                    size="lg"
-                  >
-                    <Home className="w-5 h-5 mr-2" />
-                    New Game
-                  </Button>
-                )}
-                {onLeave && (
-                  <Button
-                    onClick={onLeave}
-                    variant="outline"
-                    className="flex-1 text-parchment-400"
-                    size="lg"
-                  >
-                    Leave
-                  </Button>
-                )}
-              </div>
+
+              {/* New game and leave buttons - always show unless receiving request */}
+              {!isReceivingRequest && !isWaitingForResponse && (
+                <div className="flex gap-3">
+                  {onNewGame && (
+                    <Button
+                      onClick={onNewGame}
+                      variant="outline"
+                      className="flex-1"
+                      size="lg"
+                    >
+                      <Home className="w-5 h-5 mr-2" />
+                      New Game
+                    </Button>
+                  )}
+                  {onLeave && (
+                    <Button
+                      onClick={onLeave}
+                      variant="outline"
+                      className="flex-1 text-parchment-400"
+                      size="lg"
+                    >
+                      Leave
+                    </Button>
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         </motion.div>

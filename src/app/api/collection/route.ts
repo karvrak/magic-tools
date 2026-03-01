@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getBestPrice } from '@/lib/utils'
 import { addCollectionItemSchema, updateCollectionItemSchema, deleteCollectionItemParamsSchema } from '@/lib/validations'
+import { getRequestUser, getUserOwnerIds, buildOwnerFilter } from '@/lib/api-auth'
 
 // Minimal card fields needed for collection display
 const cardSelect = {
@@ -31,8 +32,11 @@ const ownerSelect = {
 // GET /api/collection - Get collection items + wantlist items with pagination
 export async function GET(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const { searchParams } = new URL(request.url)
-    const ownerId = searchParams.get('ownerId')
+    const ownerIdParam = searchParams.get('ownerId')
     const filter = searchParams.get('filter') // 'owned' | 'wanted' | 'all' (default: 'all')
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '24')))
@@ -51,6 +55,33 @@ export async function GET(request: NextRequest) {
     const isFoil = searchParams.get('isFoil')
     const sortBy = searchParams.get('sortBy') || 'date' // 'date' | 'name' | 'price' | 'cmc' | 'rarity'
     const sortDir = searchParams.get('sortDir') || 'desc' // 'asc' | 'desc'
+
+    // Resolve the effective ownerId filter respecting user scope.
+    // If a user passes an ownerIdParam, validate it is within their allowed ownerIds.
+    // If no ownerIdParam is provided and the user is scoped (ownerIds !== null), filter
+    // across all of their ownerIds.
+    let effectiveOwnerFilter: Record<string, unknown> = {}
+    let effectiveOwnerIdForRawSql: string | null = null
+
+    if (ownerIds === null) {
+      // Admin: respect the query param as-is
+      if (ownerIdParam) {
+        effectiveOwnerFilter = { ownerId: ownerIdParam }
+        effectiveOwnerIdForRawSql = ownerIdParam
+      }
+    } else {
+      // Regular user: scope to their ownerIds
+      if (ownerIdParam) {
+        if (!ownerIds.includes(ownerIdParam)) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+        effectiveOwnerFilter = { ownerId: ownerIdParam }
+        effectiveOwnerIdForRawSql = ownerIdParam
+      } else {
+        effectiveOwnerFilter = buildOwnerFilter(ownerIds)
+        // No single ownerId — will use IN clause in raw SQL
+      }
+    }
 
     // Build card filter conditions
     const buildCardWhere = () => {
@@ -104,12 +135,10 @@ export async function GET(request: NextRequest) {
     }
 
     const cardWhere = buildCardWhere()
-    const hasCardFilters = cardWhere !== undefined
 
     // Build collection-specific filters
     const buildCollectionWhere = () => {
-      const conditions: Record<string, unknown> = {}
-      if (ownerId) conditions.ownerId = ownerId
+      const conditions: Record<string, unknown> = { ...effectiveOwnerFilter }
       if (cardWhere) conditions.card = cardWhere
       if (condition) conditions.condition = condition
       if (isFoil === 'true') conditions.isFoil = true
@@ -118,8 +147,7 @@ export async function GET(request: NextRequest) {
     }
 
     const buildWantlistWhere = () => {
-      const conditions: Record<string, unknown> = {}
-      if (ownerId) conditions.ownerId = ownerId
+      const conditions: Record<string, unknown> = { ...effectiveOwnerFilter }
       if (cardWhere) conditions.card = cardWhere
       return conditions
     }
@@ -128,8 +156,6 @@ export async function GET(request: NextRequest) {
     const wantlistWhere = buildWantlistWhere()
 
     // Get counts and totals via optimized aggregate queries (runs in parallel)
-    const ownerWhere = ownerId ? { ownerId } : {}
-
     const [ownedStats, wantedStats] = await Promise.all([
       filter !== 'wanted'
         ? prisma.collectionItem.aggregate({
@@ -250,9 +276,29 @@ export async function GET(request: NextRequest) {
         : Promise.resolve([]),
     ])
 
-    // Get total prices via SQL for global stats (runs in parallel with items fetch next time)
-    const ownerFilter = ownerId ? `AND ci."ownerId" = '${ownerId}'` : ''
-    const ownerFilterWant = ownerId ? `AND wi."ownerId" = '${ownerId}'` : ''
+    // Build the raw SQL owner filter clause.
+    // For a single ownerId (admin scoped or user with specific param) use = comparison.
+    // For a user with multiple ownerIds (no specific param), use IN (...).
+    const buildRawOwnerFilter = (alias: string): string => {
+      if (effectiveOwnerIdForRawSql !== null) {
+        // Single validated ownerId — safe to inline because it passed Prisma lookup or admin param
+        return `AND ${alias}."ownerId" = '${effectiveOwnerIdForRawSql.replace(/'/g, "''")}'`
+      }
+      if (ownerIds !== null && ownerIds.length > 0) {
+        // Regular user with multiple ownerIds — build IN list
+        const escaped = ownerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(', ')
+        return `AND ${alias}."ownerId" IN (${escaped})`
+      }
+      if (ownerIds !== null && ownerIds.length === 0) {
+        // User has no owners — return nothing
+        return `AND 1=0`
+      }
+      // Admin with no filter
+      return ''
+    }
+
+    const ownerFilter = buildRawOwnerFilter('ci')
+    const ownerFilterWant = buildRawOwnerFilter('wi')
 
     const [ownedPriceResult, wantedPriceResult] = await Promise.all([
       filter !== 'wanted'
@@ -302,11 +348,17 @@ export async function GET(request: NextRequest) {
     const allItems = [...collectionItems, ...wantlistItems]
     const cardIds = [...new Set(allItems.map((item) => item.cardId))]
 
-    // Get decks containing these cards
+    // Get decks containing these cards, scoped to user's owners
+    const deckOwnerFilter = effectiveOwnerIdForRawSql
+      ? { deck: { ownerId: effectiveOwnerIdForRawSql } }
+      : ownerIds !== null
+        ? { deck: { ownerId: { in: ownerIds } } }
+        : {}
+
     const deckCards = cardIds.length > 0 ? await prisma.deckCard.findMany({
       where: {
         cardId: { in: cardIds },
-        ...(ownerId ? { deck: { ownerId } } : {}),
+        ...deckOwnerFilter,
       },
       select: {
         cardId: true,
@@ -350,7 +402,7 @@ export async function GET(request: NextRequest) {
           }
         : null
 
-      const isFoil = isOwned ? (item as typeof collectionItems[0]).isFoil : false
+      const isFoilVal = isOwned ? (item as typeof collectionItems[0]).isFoil : false
 
       const wantItem = !isOwned ? (item as typeof wantlistItems[0]) : null
 
@@ -362,7 +414,7 @@ export async function GET(request: NextRequest) {
         quantity: item.quantity,
         type: isOwned ? 'owned' : 'wanted',
         condition: isOwned ? (item as typeof collectionItems[0]).condition : null,
-        isFoil,
+        isFoil: isFoilVal,
         updatedAt: isOwned ? (item as typeof collectionItems[0]).updatedAt : null,
         priority: wantItem?.priority ?? null,
         isOrdered: wantItem?.isOrdered ?? null,
@@ -405,6 +457,9 @@ export async function GET(request: NextRequest) {
 // POST /api/collection - Add item to collection
 export async function POST(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const body = await request.json()
     const parsed = addCollectionItemSchema.safeParse(body)
     if (!parsed.success) {
@@ -414,6 +469,13 @@ export async function POST(request: NextRequest) {
       )
     }
     const { cardId, quantity, condition, isFoil, notes, ownerId } = parsed.data
+
+    // For regular users, verify the requested ownerId is within their allowed owners
+    if (ownerIds !== null && ownerId) {
+      if (!ownerIds.includes(ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     // Check card exists and upsert in one query using unique constraint
     const existing = await prisma.collectionItem.findUnique({
@@ -470,6 +532,9 @@ export async function POST(request: NextRequest) {
 // PATCH /api/collection - Update collection item
 export async function PATCH(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const body = await request.json()
     const parsed = updateCollectionItemSchema.safeParse(body)
     if (!parsed.success) {
@@ -479,6 +544,24 @@ export async function PATCH(request: NextRequest) {
       )
     }
     const { id, quantity, condition, isFoil, notes, ownerId } = parsed.data
+
+    // For regular users, verify the item belongs to one of their owners before mutating
+    if (ownerIds !== null) {
+      const existingItem = await prisma.collectionItem.findUnique({
+        where: { id },
+        select: { ownerId: true },
+      })
+      if (!existingItem) {
+        return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+      }
+      if (!existingItem.ownerId || !ownerIds.includes(existingItem.ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      // If they're also trying to move to a different ownerId, validate that target too
+      if (ownerId !== undefined && ownerId !== null && !ownerIds.includes(ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     if (quantity !== undefined && quantity <= 0) {
       await prisma.collectionItem.delete({ where: { id } })
@@ -513,6 +596,9 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/collection - Remove item from collection
 export async function DELETE(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const { searchParams } = new URL(request.url)
     const parsed = deleteCollectionItemParamsSchema.safeParse({
       id: searchParams.get('id'),
@@ -524,6 +610,20 @@ export async function DELETE(request: NextRequest) {
       )
     }
     const { id } = parsed.data
+
+    // For regular users, verify the item belongs to one of their owners before deleting
+    if (ownerIds !== null) {
+      const existingItem = await prisma.collectionItem.findUnique({
+        where: { id },
+        select: { ownerId: true },
+      })
+      if (!existingItem) {
+        return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+      }
+      if (!existingItem.ownerId || !ownerIds.includes(existingItem.ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     await prisma.collectionItem.delete({ where: { id } })
 

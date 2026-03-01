@@ -39,6 +39,9 @@ export function GameRoom({
   onNextTurn,
   onSetReady,
   gamePhase,
+  decks,
+  selectedDeckId,
+  onSelectDeck,
 }: GameRoomProps) {
   const currentPlayer = players.find(p => p.id === playerId)
   const opponents = players.filter(p => p.id !== playerId)
@@ -421,6 +424,9 @@ export function GameRoom({
         countdown={countdown}
         allPlayersReady={allPlayersReady}
         onSetReady={onSetReady}
+        decks={decks}
+        selectedDeckId={selectedDeckId}
+        onSelectDeck={onSelectDeck}
       />
     )
   }

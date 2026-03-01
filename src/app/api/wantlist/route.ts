@@ -2,15 +2,37 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getBestPrice } from '@/lib/utils'
 import { addWantlistItemSchema, updateWantlistItemSchema, deleteWantlistItemParamsSchema } from '@/lib/validations'
+import { getRequestUser, getUserOwnerIds, buildOwnerFilter } from '@/lib/api-auth'
 
 // GET /api/wantlist - Get all wantlist items (optionally filtered by owner)
 export async function GET(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const { searchParams } = new URL(request.url)
-    const ownerId = searchParams.get('ownerId')
+    const ownerIdParam = searchParams.get('ownerId')
+
+    // Resolve effective where clause for owner scoping
+    let ownerWhere: Record<string, unknown>
+
+    if (ownerIds === null) {
+      // Admin: respect the query param as-is
+      ownerWhere = ownerIdParam ? { ownerId: ownerIdParam } : {}
+    } else {
+      // Regular user: scope to their ownerIds
+      if (ownerIdParam) {
+        if (!ownerIds.includes(ownerIdParam)) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+        ownerWhere = { ownerId: ownerIdParam }
+      } else {
+        ownerWhere = buildOwnerFilter(ownerIds)
+      }
+    }
 
     const items = await prisma.wantlistItem.findMany({
-      where: ownerId ? { ownerId } : undefined,
+      where: ownerWhere,
       orderBy: [
         { priority: 'desc' },
         { createdAt: 'desc' },
@@ -83,6 +105,9 @@ export async function GET(request: NextRequest) {
 // POST /api/wantlist - Add item to wantlist
 export async function POST(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const body = await request.json()
     const parsed = addWantlistItemSchema.safeParse(body)
     if (!parsed.success) {
@@ -92,6 +117,13 @@ export async function POST(request: NextRequest) {
       )
     }
     const { cardId, quantity, priority, notes, ownerId } = parsed.data
+
+    // For regular users, verify the requested ownerId is within their allowed owners
+    if (ownerIds !== null && ownerId) {
+      if (!ownerIds.includes(ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     // Check if card exists
     const card = await prisma.card.findUnique({ where: { id: cardId } })
@@ -160,6 +192,9 @@ export async function POST(request: NextRequest) {
 // PATCH /api/wantlist - Update wantlist item
 export async function PATCH(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const body = await request.json()
     const parsed = updateWantlistItemSchema.safeParse(body)
     if (!parsed.success) {
@@ -169,6 +204,24 @@ export async function PATCH(request: NextRequest) {
       )
     }
     const { id, quantity, priority, notes, ownerId, isOrdered, isReceived } = parsed.data
+
+    // For regular users, verify the item belongs to one of their owners before mutating
+    if (ownerIds !== null) {
+      const existingItem = await prisma.wantlistItem.findUnique({
+        where: { id },
+        select: { ownerId: true },
+      })
+      if (!existingItem) {
+        return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+      }
+      if (!existingItem.ownerId || !ownerIds.includes(existingItem.ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      // If they're also trying to move to a different ownerId, validate that target too
+      if (ownerId !== undefined && ownerId !== null && !ownerIds.includes(ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     if (quantity !== undefined && quantity <= 0) {
       // Delete if quantity is 0
@@ -212,6 +265,9 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/wantlist - Remove item from wantlist
 export async function DELETE(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const { searchParams } = new URL(request.url)
     const parsed = deleteWantlistItemParamsSchema.safeParse({
       id: searchParams.get('id'),
@@ -223,6 +279,20 @@ export async function DELETE(request: NextRequest) {
       )
     }
     const { id } = parsed.data
+
+    // For regular users, verify the item belongs to one of their owners before deleting
+    if (ownerIds !== null) {
+      const existingItem = await prisma.wantlistItem.findUnique({
+        where: { id },
+        select: { ownerId: true },
+      })
+      if (!existingItem) {
+        return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+      }
+      if (!existingItem.ownerId || !ownerIds.includes(existingItem.ownerId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     await prisma.wantlistItem.delete({ where: { id } })
 

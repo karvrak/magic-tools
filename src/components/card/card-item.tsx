@@ -76,19 +76,35 @@ export function CardItem({ card, onClick, index = 0 }: CardItemProps) {
         )}
         
         {card.imageNormal ? (
-          <Image
-            src={card.imageNormal}
-            alt={card.name}
-            fill
-            className={cn(
-              "object-cover rounded-lg transition-all duration-500",
-              imageLoaded ? "opacity-100" : "opacity-0",
-              isHovered && "scale-105"
-            )}
-            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
-            loading="lazy"
-            onLoad={() => setImageLoaded(true)}
-          />
+          card.imageNormal.startsWith('/api/custom-sets/') ? (
+            // Custom set images: use native img to bypass Next.js image optimization
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={card.imageNormal}
+              alt={card.name}
+              className={cn(
+                "absolute inset-0 w-full h-full object-cover rounded-lg transition-all duration-500",
+                imageLoaded ? "opacity-100" : "opacity-0",
+                isHovered && "scale-105"
+              )}
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+            />
+          ) : (
+            <Image
+              src={card.imageNormal}
+              alt={card.name}
+              fill
+              className={cn(
+                "object-cover rounded-lg transition-all duration-500",
+                imageLoaded ? "opacity-100" : "opacity-0",
+                isHovered && "scale-105"
+              )}
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+            />
+          )
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-dungeon-500 p-2">
             <span className="text-xs text-center font-body">{card.printedName || card.name}</span>

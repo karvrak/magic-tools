@@ -2,15 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Swords, Shield, Scroll, Sparkles, Lock } from 'lucide-react'
+import { Swords, Shield, Scroll, Sparkles, Lock, Mail } from 'lucide-react'
 import { DiceLoaderInline } from '@/components/ui/dice-loader'
 
 export default function LoginPage() {
   const router = useRouter()
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -25,7 +27,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       })
 
       if (res.ok) {
@@ -35,7 +37,7 @@ export default function LoginPage() {
           router.refresh()
         }, 1500)
       } else {
-        setError('The ancient seal rejects your passphrase. Try again, adventurer.')
+        setError('The ancient seal rejects your credentials. Try again, adventurer.')
       }
     } catch {
       setError('The magical connection has been severed. Please try again.')
@@ -49,17 +51,17 @@ export default function LoginPage() {
       {/* Animated background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {/* Arcane circles */}
-        <motion.div 
+        <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-arcane-600/20"
           animate={{ rotate: 360 }}
           transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-gold-600/20"
           animate={{ rotate: -360 }}
           transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full border border-arcane-600/30"
           animate={{ rotate: 360 }}
           transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
@@ -94,17 +96,17 @@ export default function LoginPage() {
         ))}
 
         {/* Torch glows */}
-        <motion.div 
+        <motion.div
           className="absolute top-20 left-20 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl"
-          animate={{ 
+          animate={{
             scale: [1, 1.2, 1],
             opacity: [0.3, 0.5, 0.3],
           }}
           transition={{ duration: 2, repeat: Infinity }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-20 right-20 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl"
-          animate={{ 
+          animate={{
             scale: [1, 1.2, 1],
             opacity: [0.3, 0.5, 0.3],
           }}
@@ -124,9 +126,9 @@ export default function LoginPage() {
       >
         <div className="card-frame-ornate p-8">
           {/* Magical seal at top */}
-          <motion.div 
+          <motion.div
             className="absolute -top-6 left-1/2 -translate-x-1/2"
-            animate={{ 
+            animate={{
               boxShadow: [
                 '0 0 20px rgba(212, 164, 24, 0.3)',
                 '0 0 40px rgba(212, 164, 24, 0.5)',
@@ -142,9 +144,9 @@ export default function LoginPage() {
 
           {/* Header */}
           <div className="text-center mb-8 pt-4">
-            <motion.div 
+            <motion.div
               className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-gold-500 via-gold-600 to-gold-700 mb-4 shadow-lg"
-              animate={{ 
+              animate={{
                 boxShadow: [
                   '0 0 20px rgba(212, 164, 24, 0.3)',
                   '0 0 40px rgba(212, 164, 24, 0.5)',
@@ -155,7 +157,7 @@ export default function LoginPage() {
             >
               <Scroll className="w-10 h-10 text-dungeon-900" />
             </motion.div>
-            
+
             <h1 className="font-display text-3xl text-gold-400 mb-2 text-glow">
               magicTools
             </h1>
@@ -165,7 +167,24 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center gap-2 text-parchment-300">
+                <Mail className="w-4 h-4 text-gold-500" />
+                <span className="font-medieval">Arcane Address</span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="mage@arcane-library.com"
+                required
+                autoFocus
+                disabled={loading || success}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="password" className="flex items-center gap-2 text-parchment-300">
                 <Shield className="w-4 h-4 text-gold-500" />
@@ -179,7 +198,6 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Whisper the ancient words..."
                   required
-                  autoFocus
                   disabled={loading || success}
                   className="pr-10"
                 />
@@ -197,7 +215,7 @@ export default function LoginPage() {
                   className="overflow-hidden"
                 >
                   <div className="p-3 rounded-md bg-dragon-900/50 border border-dragon-700 text-dragon-300 text-sm font-body">
-                    <span className="font-medieval text-dragon-400">⚔️ Failed!</span> {error}
+                    <span className="font-medieval text-dragon-400">Failed!</span> {error}
                   </div>
                 </motion.div>
               )}
@@ -211,7 +229,7 @@ export default function LoginPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="p-3 rounded-md bg-nature-900/50 border border-nature-700 text-nature-300 text-sm font-body text-center"
                 >
-                  <span className="font-medieval text-nature-400">✨ Success!</span> The gates are opening...
+                  <span className="font-medieval text-nature-400">Success!</span> The gates are opening...
                 </motion.div>
               )}
             </AnimatePresence>
@@ -220,7 +238,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full h-12 text-base"
-              disabled={loading || !password || success}
+              disabled={loading || !email || !password || success}
             >
               {loading ? (
                 <span className="flex items-center gap-3">
@@ -242,24 +260,34 @@ export default function LoginPage() {
           </form>
 
           {/* Decorative divider */}
-          <div className="relative my-8">
+          <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-dungeon-700" />
             </div>
             <div className="relative flex justify-center text-xs">
               <span className="bg-dungeon-800 px-4 text-dungeon-500 font-medieval">
-                ◆ ᚠᚢᚦᚨᚱᚲ ◆
+                or
               </span>
             </div>
           </div>
 
-          {/* Footer */}
+          {/* Register link */}
           <div className="text-center">
+            <Link
+              href="/register"
+              className="text-sm text-gold-500 hover:text-gold-400 transition-colors font-medieval"
+            >
+              New here? Create an account
+            </Link>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-6">
             <p className="text-xs text-dungeon-500 font-body">
               Powered by{' '}
-              <a 
-                href="https://scryfall.com" 
-                target="_blank" 
+              <a
+                href="https://scryfall.com"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gold-600 hover:text-gold-500 transition-colors"
               >
@@ -271,7 +299,7 @@ export default function LoginPage() {
         </div>
 
         {/* Bottom decorative element */}
-        <motion.div 
+        <motion.div
           className="flex justify-center mt-6 gap-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
 
 // GET /api/decks/[id]/export - Export deck as TXT decklist
 export async function GET(
@@ -8,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { userId, role } = await getRequestUser()
     const { searchParams } = new URL(request.url)
     const format = searchParams.get('format') || 'arena' // arena, mtgo, simple
 
@@ -31,6 +33,15 @@ export async function GET(
 
     if (!deck) {
       return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+    }
+
+    if (deck.ownerId) {
+      const hasAccess = await verifyOwnerAccess(deck.ownerId, userId, role)
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    } else if (role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Group cards by category

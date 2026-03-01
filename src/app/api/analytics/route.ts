@@ -1,21 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getRequestUser, getUserOwnerIds, buildOwnerFilter } from '@/lib/api-auth'
 
 // GET /api/analytics - Get analytics data
 export async function GET(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const { searchParams } = request.nextUrl
-    const ownerId = searchParams.get('ownerId')
+    const ownerIdParam = searchParams.get('ownerId')
     const days = parseInt(searchParams.get('days') || '90', 10)
 
     const since = new Date()
     since.setDate(since.getDate() - days)
     since.setHours(0, 0, 0, 0)
 
+    // Resolve effective owner filter respecting user scope
+    let snapshotOwnerWhere: Record<string, unknown>
+    let collectionOwnerWhere: Record<string, unknown>
+
+    if (ownerIds === null) {
+      // Admin: respect the query param as-is
+      snapshotOwnerWhere = { ownerId: ownerIdParam || null }
+      collectionOwnerWhere = ownerIdParam ? { ownerId: ownerIdParam } : {}
+    } else {
+      // Regular user: scope to their ownerIds
+      if (ownerIdParam) {
+        if (!ownerIds.includes(ownerIdParam)) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+        snapshotOwnerWhere = { ownerId: ownerIdParam }
+        collectionOwnerWhere = { ownerId: ownerIdParam }
+      } else {
+        // No specific ownerId — filter across all of the user's owners
+        const ownerFilter = buildOwnerFilter(ownerIds)
+        snapshotOwnerWhere = ownerFilter
+        collectionOwnerWhere = ownerFilter
+      }
+    }
+
     // 1. Value evolution from snapshots
     const snapshots = await prisma.collectionSnapshot.findMany({
       where: {
-        ownerId: ownerId || null,
+        ...snapshotOwnerWhere,
         date: { gte: since },
       },
       orderBy: { date: 'asc' },
@@ -29,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     // 2. Current rarity distribution from collection
     const collectionItems = await prisma.collectionItem.findMany({
-      where: ownerId ? { ownerId } : {},
+      where: collectionOwnerWhere,
       include: {
         card: {
           select: {

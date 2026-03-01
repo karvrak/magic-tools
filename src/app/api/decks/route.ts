@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getBestPrice } from '@/lib/utils'
 import { createDeckSchema } from '@/lib/validations'
+import { getRequestUser, getUserOwnerIds, buildOwnerFilter, verifyOwnerAccess } from '@/lib/api-auth'
 
 // Helper to compute deck's color identity from its cards
 // Uses intersection of spell colors and land colors to determine actual deck colors
@@ -42,6 +43,9 @@ function computeDeckColors(cards: { card: { colorIdentity: string[], typeLine?: 
 // GET /api/decks - List all decks with optional filters
 export async function GET(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+    const ownerIds = await getUserOwnerIds(userId, role)
+
     const { searchParams } = new URL(request.url)
     const ownerId = searchParams.get('ownerId')
     const cardName = searchParams.get('cardName')?.trim()
@@ -59,6 +63,14 @@ export async function GET(request: NextRequest) {
     const filterTags = tagsParam
       ? tagsParam.split(',').map(t => t.toLowerCase().trim()).filter(t => t.length > 0)
       : []
+
+    // If a specific ownerId was requested, verify it belongs to this user
+    if (ownerId) {
+      const allowed = await verifyOwnerAccess(ownerId, userId, role)
+      if (!allowed) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     // Build where clause for card name filter
     // If cardName is specified, we need to filter decks that contain a card with that name
@@ -86,9 +98,12 @@ export async function GET(request: NextRequest) {
         : { tags: { some: { name: { in: filterTags } } } }
       : {}
 
+    // ownerFilter enforces user-scoped isolation; ownerId query param narrows further
+    const ownerFilter = ownerId ? { ownerId } : buildOwnerFilter(ownerIds)
+
     const decks = await prisma.deck.findMany({
       where: {
-        ...(ownerId ? { ownerId } : {}),
+        ...ownerFilter,
         ...(deckIdsWithCard !== null ? { id: { in: deckIdsWithCard } } : {}),
         ...tagsFilter,
       },
@@ -258,6 +273,8 @@ export async function GET(request: NextRequest) {
 // POST /api/decks - Create a new deck
 export async function POST(request: NextRequest) {
   try {
+    const { userId, role } = await getRequestUser()
+
     const body = await request.json()
     const parsed = createDeckSchema.safeParse(body)
     if (!parsed.success) {
@@ -272,9 +289,17 @@ export async function POST(request: NextRequest) {
     let finalOwnerId = ownerId
     if (!finalOwnerId) {
       const defaultOwner = await prisma.owner.findFirst({
-        where: { isDefault: true },
+        where: { isDefault: true, userId },
       })
       finalOwnerId = defaultOwner?.id || null
+    }
+
+    // Verify the resolved ownerId belongs to the requesting user
+    if (finalOwnerId) {
+      const allowed = await verifyOwnerAccess(finalOwnerId, userId, role)
+      if (!allowed) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     const deck = await prisma.deck.create({

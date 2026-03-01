@@ -30,6 +30,7 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/layout/page-
 import { Button } from '@/components/ui/button'
 import { toast } from '@/hooks/use-toast'
 import { SyncProgressBar } from '@/components/layout/sync-progress-bar'
+import { useAuthUser } from '@/contexts/auth-user'
 
 // Keyboard shortcuts configuration
 type Shortcut = {
@@ -211,6 +212,7 @@ const documentationSections = [
 ]
 
 export default function HelpPage() {
+  const { isAdmin } = useAuthUser()
   const [syncing, setSyncing] = useState<'cards' | 'prices' | null>(null)
   const [migrating, setMigrating] = useState(false)
   const [migrationResult, setMigrationResult] = useState<{
@@ -330,8 +332,8 @@ export default function HelpPage() {
         </div>
       </FadeIn>
 
-      {/* Database Sync Section */}
-      <FadeIn delay={0.05}>
+      {/* Database Sync Section - Admin only */}
+      {isAdmin && <FadeIn delay={0.05}>
         <section className="card-frame p-6 border-arcane-500/30">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-arcane-600/20 flex items-center justify-center">
@@ -426,10 +428,10 @@ export default function HelpPage() {
             </p>
           </div>
         </section>
-      </FadeIn>
+      </FadeIn>}
 
-      {/* Data Tools Section */}
-      <FadeIn delay={0.07}>
+      {/* Data Tools Section - Admin only */}
+      {isAdmin && <FadeIn delay={0.07}>
         <section className="card-frame p-6 border-gold-500/30">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-gold-600/20 flex items-center justify-center">
@@ -486,7 +488,7 @@ export default function HelpPage() {
             </p>
           </div>
         </section>
-      </FadeIn>
+      </FadeIn>}
 
       {/* Keyboard Shortcuts Section */}
       <FadeIn delay={0.1}>

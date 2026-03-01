@@ -20,6 +20,7 @@ import { CollectionFiltersPanel, CollectionFilters, DEFAULT_COLLECTION_FILTERS }
 import { ImportDecksModal } from '@/components/collection/import-decks-modal'
 import { CollectionCardItem } from '@/components/collection/collection-card-item'
 import { CardScannerModal } from '@/components/scanner'
+import { useAuthUser } from '@/contexts/auth-user'
 
 interface Owner {
   id: string
@@ -84,6 +85,7 @@ export default function CollectionPage() {
   const [page, setPage] = useState(1)
   const pageSize = 24
   const { activeOwner } = useActiveOwner()
+  const { isAdmin } = useAuthUser()
   const [cardFilters, setCardFilters] = useState<CollectionFilters>(DEFAULT_COLLECTION_FILTERS)
   const [showImportModal, setShowImportModal] = useState(false)
   const [showScannerModal, setShowScannerModal] = useState(false)
@@ -346,14 +348,16 @@ export default function CollectionPage() {
       {/* Scanner Button - Always visible, prominent on mobile */}
       <FadeIn delay={0.05}>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Scanner button - first on mobile */}
-          <Button
-            onClick={() => setShowScannerModal(true)}
-            className="h-10 gap-2 bg-arcane-600 hover:bg-arcane-500 text-white order-first sm:order-none"
-          >
-            <ScanLine className="w-5 h-5" />
-            <span>Scanner</span>
-          </Button>
+          {/* Scanner button - first on mobile, admin only */}
+          {isAdmin && (
+            <Button
+              onClick={() => setShowScannerModal(true)}
+              className="h-10 gap-2 bg-arcane-600 hover:bg-arcane-500 text-white order-first sm:order-none"
+            >
+              <ScanLine className="w-5 h-5" />
+              <span>Scanner</span>
+            </Button>
+          )}
 
           {/* Filter tabs - only if has cards */}
           {data && (data.owned.count > 0 || data.wanted.count > 0) && (
@@ -556,14 +560,16 @@ export default function CollectionPage() {
         ownerId={activeOwner?.id}
       />
 
-      {/* Card Scanner Modal */}
-      <CardScannerModal
-        open={showScannerModal}
-        onClose={() => setShowScannerModal(false)}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['collection'] })
-        }}
-      />
+      {/* Card Scanner Modal - Admin only */}
+      {isAdmin && (
+        <CardScannerModal
+          open={showScannerModal}
+          onClose={() => setShowScannerModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['collection'] })
+          }}
+        />
+      )}
     </div>
   )
 }

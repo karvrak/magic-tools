@@ -111,13 +111,37 @@ model Card {
 }
 
 // ============================================
+// USERS (Comptes utilisateurs)
+// ============================================
+enum UserRole {
+  admin
+  user
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // bcrypt hash
+  role      UserRole @default(user)
+  owners    Owner[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+// ============================================
 // OWNERS (Propriétaires des decks)
 // ============================================
 model Owner {
   id          String   @id @default(cuid())
-  name        String   @unique
+  name        String
   color       String   @default("#D4AF37") // Couleur d'affichage (gold par défaut)
   isDefault   Boolean  @default(false)     // Propriétaire par défaut pour nouveaux decks
+
+  // Lien vers le compte utilisateur
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   decks               Deck[]
   wantlistItems       WantlistItem[]
@@ -126,6 +150,9 @@ model Owner {
   collectionSnapshots CollectionSnapshot[]
 
   createdAt   DateTime @default(now())
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 // ============================================
@@ -612,4 +639,14 @@ model CollectionSnapshot {
 
   @@unique([ownerId, date])
   @@index([date])
+}
+
+// ============================================
+// SHARED CUSTOM SETS (Public sharing)
+// ============================================
+model SharedCustomSet {
+  id         String   @id @default(cuid())
+  setCode    String   @unique
+  shareToken String   @unique
+  createdAt  DateTime @default(now())
 }

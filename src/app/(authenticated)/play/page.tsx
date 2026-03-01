@@ -26,12 +26,6 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { cn, formatDate } from '@/lib/utils'
 
-interface Deck {
-  id: string
-  name: string
-  format: string | null
-}
-
 interface GamePlayer {
   id: string
   name: string
@@ -68,23 +62,11 @@ export default function PlayPage() {
   const [playerColor, setPlayerColor] = useState('#D4AF37')
   const [maxPlayers, setMaxPlayers] = useState('2')
   const [startingLife, setStartingLife] = useState('20')
-  const [selectedDeckId, setSelectedDeckId] = useState<string>('none')
-  
+
   // Join session form
   const [joinCode, setJoinCode] = useState('')
   const [joinName, setJoinName] = useState('')
   const [joinColor, setJoinColor] = useState('#3B82F6')
-  const [joinDeckId, setJoinDeckId] = useState<string>('none')
-
-  // Fetch decks
-  const { data: decksData } = useQuery<{ decks: Deck[] }>({
-    queryKey: ['decks'],
-    queryFn: async () => {
-      const response = await fetch('/api/decks')
-      if (!response.ok) throw new Error('Failed to fetch decks')
-      return response.json()
-    },
-  })
 
   // Fetch recent sessions
   const { data: sessionsData, refetch: refetchSessions } = useQuery<{ sessions: GameSession[] }>({
@@ -100,8 +82,6 @@ export default function PlayPage() {
   // Create session mutation
   const createMutation = useMutation({
     mutationFn: async () => {
-      const hasDeck = selectedDeckId && selectedDeckId !== 'none'
-      const deck = hasDeck ? decksData?.decks.find(d => d.id === selectedDeckId) : null
       const response = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,8 +90,6 @@ export default function PlayPage() {
           playerColor,
           maxPlayers: parseInt(maxPlayers),
           startingLife: parseInt(startingLife),
-          deckId: hasDeck ? selectedDeckId : undefined,
-          deckName: deck?.name,
         }),
       })
       if (!response.ok) throw new Error('Failed to create session')
@@ -136,16 +114,12 @@ export default function PlayPage() {
   // Join session mutation
   const joinMutation = useMutation({
     mutationFn: async () => {
-      const hasJoinDeck = joinDeckId && joinDeckId !== 'none'
-      const joinDeck = hasJoinDeck ? decksData?.decks.find(d => d.id === joinDeckId) : null
       const response = await fetch(`/api/sessions/${joinCode.toUpperCase()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           playerName: joinName,
           playerColor: joinColor,
-          deckId: hasJoinDeck ? joinDeckId : undefined,
-          deckName: joinDeck?.name,
         }),
       })
       if (!response.ok) {
@@ -268,25 +242,8 @@ export default function PlayPage() {
               </div>
             </div>
 
-            <div>
-              <Label>Deck (optional)</Label>
-              <Select value={selectedDeckId} onValueChange={setSelectedDeckId}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a deck..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No deck</SelectItem>
-                  {decksData?.decks.map((deck) => (
-                    <SelectItem key={deck.id} value={deck.id}>
-                      {deck.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button 
-              onClick={handleCreate} 
+            <Button
+              onClick={handleCreate}
               disabled={createMutation.isPending}
               className="w-full"
             >
@@ -351,25 +308,8 @@ export default function PlayPage() {
               </div>
             </div>
 
-            <div>
-              <Label>Deck (optional)</Label>
-              <Select value={joinDeckId} onValueChange={setJoinDeckId}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a deck..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No deck</SelectItem>
-                  {decksData?.decks.map((deck) => (
-                    <SelectItem key={deck.id} value={deck.id}>
-                      {deck.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button 
-              onClick={handleJoin} 
+            <Button
+              onClick={handleJoin}
               disabled={joinMutation.isPending || !joinCode || !joinName}
               className="w-full"
             >

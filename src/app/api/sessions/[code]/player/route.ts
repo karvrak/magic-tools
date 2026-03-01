@@ -37,6 +37,8 @@ export async function PATCH(
       manaPoolColors,
       handCards,
       libraryCards,
+      deckId,
+      deckName,
     } = parsed.data
 
     // Verify that the session exists
@@ -83,6 +85,8 @@ export async function PATCH(
     if (manaPoolColors !== undefined) updates.manaPoolColors = manaPoolColors
     if (handCards !== undefined) updates.handCards = handCards
     if (libraryCards !== undefined) updates.libraryCards = libraryCards
+    if (deckId !== undefined) updates.deckId = deckId
+    if (deckName !== undefined) updates.deckName = deckName
 
     // Update the player
     const updatedPlayer = await prisma.gamePlayer.update({
