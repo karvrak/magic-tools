@@ -33,6 +33,8 @@ export interface SearchFilters {
   newnessSince: string | null // ISO date string
   // Custom sets filter
   customSets: boolean
+  // User card tags filter (global tags assigned by current user to oracle cards)
+  cardTagIds: string[]
 }
 
 export const defaultSearchFilters: SearchFilters = {
@@ -56,6 +58,7 @@ export const defaultSearchFilters: SearchFilters = {
   newness: null,
   newnessSince: null,
   customSets: false,
+  cardTagIds: [],
 }
 
 export const MTG_COLORS = [

@@ -2,6 +2,8 @@ import cron from 'node-cron'
 import { syncAllCards } from './scryfall/sync-cards'
 import { syncPrices } from './scryfall/sync-prices'
 import { generateAllSnapshots } from './analytics/generate-snapshot'
+import { runEmbeddingsPipeline } from './ai/embeddings/embed-cards'
+import { runClassificationPipeline } from './ai/classification/classify-cards'
 
 let cronInitialized = false
 
@@ -63,11 +65,48 @@ export function initCronJobs() {
     timezone: 'Europe/Paris'
   })
 
+  // AI: incremental embeddings on Sunday at 4:00 AM (after card sync at 3:00 AM)
+  // Only re-embeds cards whose canonical text has changed (errata or new cards).
+  cron.schedule('0 4 * * 0', async () => {
+    if (!process.env.OPENROUTER_API_KEY && !process.env.OPENAI_API_KEY) {
+      console.log('[CRON] AI embed skipped (no LLM API key)')
+      return
+    }
+    console.log('[CRON] Starting AI incremental embeddings...')
+    try {
+      const result = await runEmbeddingsPipeline({})
+      console.log('[CRON] AI embeddings done:', result)
+    } catch (error) {
+      console.error('[CRON] AI embeddings error:', error)
+    }
+  }, {
+    timezone: 'Europe/Paris'
+  })
+
+  // AI: incremental classification on Sunday at 5:00 AM (after embeddings)
+  cron.schedule('0 5 * * 0', async () => {
+    if (!process.env.OPENROUTER_API_KEY && !process.env.OPENAI_API_KEY) {
+      console.log('[CRON] AI classify skipped (no LLM API key)')
+      return
+    }
+    console.log('[CRON] Starting AI incremental classification...')
+    try {
+      const result = await runClassificationPipeline({})
+      console.log('[CRON] AI classification done:', result)
+    } catch (error) {
+      console.error('[CRON] AI classification error:', error)
+    }
+  }, {
+    timezone: 'Europe/Paris'
+  })
+
   cronInitialized = true
   console.log('[CRON] Jobs scheduled:')
   console.log('  - Prices: Daily at 10:00 AM (Europe/Paris)')
   console.log('  - Snapshots: Daily at 11:00 AM (Europe/Paris)')
   console.log('  - Cards: Sunday at 3:00 AM (Europe/Paris)')
+  console.log('  - AI embeddings: Sunday at 4:00 AM (Europe/Paris)')
+  console.log('  - AI classification: Sunday at 5:00 AM (Europe/Paris)')
 }
 
 /**

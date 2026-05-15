@@ -284,7 +284,7 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
     console.log(`[SYNC CARDS] Transferred prices to ${priceTransferResult} FR cards`)
 
     // Phase 3: Deduplicate using SQL - keep FR over EN for same illustration
-    // IMPORTANT: Don't delete cards that are referenced in decks or wantlist!
+    // IMPORTANT: Don't delete cards that are referenced by user data (FK constraints)!
     updateSyncStatus({ progress: 78, message: 'Deduplicating cards (FR over EN)...' })
     console.log('[SYNC CARDS] Deduplicating: keeping FR over EN for same illustration...')
 
@@ -293,6 +293,8 @@ export async function syncAllCards(clearFirst: boolean = false): Promise<{
       WHERE c1.lang = 'en'
       AND NOT EXISTS (SELECT 1 FROM "DeckCard" dc WHERE dc."cardId" = c1.id)
       AND NOT EXISTS (SELECT 1 FROM "WantlistItem" wi WHERE wi."cardId" = c1.id)
+      AND NOT EXISTS (SELECT 1 FROM "CollectionItem" ci WHERE ci."cardId" = c1.id)
+      AND NOT EXISTS (SELECT 1 FROM "ProxyItem" pi WHERE pi."cardId" = c1.id)
       AND EXISTS (
         SELECT 1 FROM "Card" c2 
         WHERE c2.lang = 'fr'

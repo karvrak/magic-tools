@@ -34,8 +34,30 @@ export async function GET(
         cards: {
           include: {
             card: true,
+            tags: {
+              include: {
+                cardTag: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                    deckId: true,
+                  },
+                },
+              },
+            },
           },
           orderBy: [{ category: 'asc' }, { card: { name: 'asc' } }],
+        },
+        cardTags: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            deckId: true,
+            userId: true,
+          },
+          orderBy: { name: 'asc' },
         },
       },
     })
@@ -55,6 +77,45 @@ export async function GET(
       if (!allowed) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
+    }
+
+    // Tags accessibles depuis ce deck: tags spécifiques au deck + tags globaux
+    // de l'utilisateur (le owner du deck si non-admin, sinon l'admin lui-même
+    // — un admin voit ses propres tags globaux).
+    const deckOwner = deck.ownerId
+      ? await prisma.owner.findUnique({
+          where: { id: deck.ownerId },
+          select: { userId: true },
+        })
+      : null
+    const tagOwnerUserId = deckOwner?.userId ?? userId
+    const globalCardTags = await prisma.cardTag.findMany({
+      where: { userId: tagOwnerUserId, deckId: null },
+      select: { id: true, name: true, color: true, deckId: true },
+      orderBy: { name: 'asc' },
+    })
+    const allCardTags = [...deck.cardTags, ...globalCardTags].map((t) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+      scope: t.deckId ? 'deck' : 'global',
+    }))
+
+    // Tags globaux assignés (UserCardTag) pour les oracleIds présents dans le deck.
+    // C'est ce qui rend un tag "Removal" visible dans tous les decks où la carte
+    // apparaît, sans dupliquer l'assignation par DeckCard.
+    const deckOracleIds = [...new Set(deck.cards.map((dc) => dc.card.oracleId))]
+    const globalAssignments = deckOracleIds.length
+      ? await prisma.userCardTag.findMany({
+          where: { userId: tagOwnerUserId, oracleId: { in: deckOracleIds } },
+          include: { cardTag: { select: { id: true, name: true, color: true } } },
+        })
+      : []
+    const globalTagsByOracleId = new Map<string, { id: string; name: string; color: string; scope: 'global' }[]>()
+    for (const row of globalAssignments) {
+      const list = globalTagsByOracleId.get(row.oracleId) ?? []
+      list.push({ id: row.cardTag.id, name: row.cardTag.name, color: row.cardTag.color, scope: 'global' })
+      globalTagsByOracleId.set(row.oracleId, list)
     }
 
     // Fetch minimum prices per oracleId (cheapest version of each card)
@@ -99,11 +160,30 @@ export async function GET(
         ? (minPrice.eur !== null ? minPrice.eur : (minPrice.usd !== null ? minPrice.usd * 0.92 : null))
         : null
 
+      const deckScopedTags: { id: string; name: string; color: string; scope: 'deck' | 'global' }[] = dc.tags
+        .filter((t) => t.cardTag.deckId !== null)
+        .map((t) => ({
+          id: t.cardTag.id,
+          name: t.cardTag.name,
+          color: t.cardTag.color,
+          scope: 'deck' as const,
+        }))
+      const globalTags = globalTagsByOracleId.get(card.oracleId) ?? []
+      // Union (deck-scope + global), unique par id.
+      const seen = new Set<string>()
+      const mergedTags: { id: string; name: string; color: string; scope: 'deck' | 'global' }[] = []
+      for (const t of [...deckScopedTags, ...globalTags]) {
+        if (seen.has(t.id)) continue
+        seen.add(t.id)
+        mergedTags.push(t)
+      }
+
       return {
         id: dc.id,
         cardId: dc.cardId,
         quantity: dc.quantity,
         category: dc.category,
+        tags: mergedTags,
         card: {
           ...card,
           legalities: card.legalities as Record<string, string>,
@@ -112,6 +192,28 @@ export async function GET(
         },
       }
     })
+
+    // Agrégat: nombre de cartes (en respectant les quantités) par tag.
+    const tagStats = new Map<string, { id: string; name: string; color: string; scope: string; count: number; uniqueCards: number }>()
+    for (const dc of cardsWithPrices) {
+      for (const tag of dc.tags) {
+        const existing = tagStats.get(tag.id)
+        if (existing) {
+          existing.count += dc.quantity
+          existing.uniqueCards += 1
+        } else {
+          tagStats.set(tag.id, {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color,
+            scope: tag.scope,
+            count: dc.quantity,
+            uniqueCards: 1,
+          })
+        }
+      }
+    }
+    const tagStatsArray = Array.from(tagStats.values()).sort((a, b) => b.count - a.count)
 
     // Calculate total price - use getBestPrice for EUR/USD fallback
     const totalPrice = cardsWithPrices.reduce((sum, dc) => {
@@ -144,6 +246,8 @@ export async function GET(
         cards: cardsWithPrices,
         totalPrice,
         minTotalPrice,
+        availableCardTags: allCardTags,
+        tagStats: tagStatsArray,
       },
     })
   } catch (error) {

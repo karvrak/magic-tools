@@ -257,6 +257,35 @@ export const createTagSchema = z.object({
 })
 
 // ============================================
+// CARD TAGS (tags utilisateur sur les cartes d'un deck)
+// ============================================
+
+/** POST /api/card-tags */
+export const createCardTagSchema = z.object({
+  name: z.string().min(1, 'Tag name is required').max(40, 'Tag name must be 40 characters or less').transform(s => s.trim()),
+  color: z.string().optional(),
+  deckId: z.string().optional().nullable(), // null/absent = tag global utilisateur
+})
+
+/** PATCH /api/card-tags/[id] */
+export const updateCardTagSchema = z.object({
+  name: z.string().min(1).max(40).transform(s => s.trim()).optional(),
+  color: z.string().optional(),
+})
+
+/** PATCH /api/decks/[id]/cards/tags — sync les tags d'une DeckCard */
+export const syncDeckCardTagsSchema = z.object({
+  deckCardId: z.string().min(1, 'DeckCard id is required'),
+  cardTagIds: z.array(z.string()).default([]),
+})
+
+/** PATCH /api/card-tags/assignments — sync les tags globaux assignés à une carte (oracleId) */
+export const syncOracleCardTagsSchema = z.object({
+  oracleId: z.string().min(1, 'oracleId is required'),
+  cardTagIds: z.array(z.string()).default([]),
+})
+
+// ============================================
 // BATTLES
 // ============================================
 

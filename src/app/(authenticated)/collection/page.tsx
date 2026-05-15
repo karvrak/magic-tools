@@ -124,7 +124,8 @@ export default function CollectionPage() {
     cardFilters.cmcMin !== null ||
     cardFilters.cmcMax !== null ||
     cardFilters.condition !== 'all' ||
-    cardFilters.isFoil !== 'all'
+    cardFilters.isFoil !== 'all' ||
+    cardFilters.cardTagIds.length > 0
 
   // Reset page when filters change
   useEffect(() => {
@@ -152,6 +153,7 @@ export default function CollectionPage() {
       if (cardFilters.cmcMax !== null) params.set('cmcMax', cardFilters.cmcMax.toString())
       if (cardFilters.condition && cardFilters.condition !== 'all') params.set('condition', cardFilters.condition)
       if (cardFilters.isFoil !== 'all') params.set('isFoil', cardFilters.isFoil)
+      if (cardFilters.cardTagIds.length > 0) params.set('cardTagIds', cardFilters.cardTagIds.join(','))
       params.set('sortBy', cardFilters.sortBy)
       params.set('sortDir', cardFilters.sortDir)
 

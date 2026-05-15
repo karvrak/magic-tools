@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { SearchFilters, MTG_COLORS, RARITIES, FORMATS } from '@/types/search'
 import { Input } from '@/components/ui/input'
+import type { CardTagWithUsage } from '@/components/deck/card-tags-types'
 import {
   Select,
   SelectContent,
@@ -12,11 +14,11 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Flame, 
-  Droplets, 
-  Skull, 
-  Sun, 
+import {
+  Flame,
+  Droplets,
+  Skull,
+  Sun,
   TreePine,
   Scroll,
   Sword,
@@ -27,7 +29,8 @@ import {
   Coins,
   Shield,
   Wand2,
-  Loader2
+  Loader2,
+  Tag as TagIcon,
 } from 'lucide-react'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 
@@ -584,6 +587,18 @@ function TypeAutocomplete({ value, onChange, placeholder, className }: TypeAutoc
 }
 
 export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProps) {
+  // Tags globaux de l'utilisateur — disponibles pour filtrer la recherche.
+  const { data: cardTagsData } = useQuery<{ tags: CardTagWithUsage[] }>({
+    queryKey: ['card-tags', 'global'],
+    queryFn: async () => {
+      const res = await fetch('/api/card-tags')
+      if (!res.ok) throw new Error('Failed to load card tags')
+      return res.json()
+    },
+    staleTime: 60_000,
+  })
+  const globalTags = (cardTagsData?.tags ?? []).filter((t) => t.scope === 'global')
+
   const updateFilter = <K extends keyof SearchFilters>(
     key: K,
     value: SearchFilters[K]
@@ -896,6 +911,38 @@ export function SearchFiltersPanel({ filters, onChange }: SearchFiltersPanelProp
               </div>
             </div>
           </FilterSection>
+
+          {globalTags.length > 0 && (
+            <FilterSection icon={TagIcon} title="Mes tags" delay={0.3}>
+              <div className="flex flex-wrap gap-1.5">
+                {globalTags.map((tag) => {
+                  const isActive = filters.cardTagIds.includes(tag.id)
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleArrayFilter('cardTagIds', tag.id)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-xs font-medium border-2 transition-all',
+                        isActive ? 'shadow-md' : 'opacity-80 hover:opacity-100'
+                      )}
+                      style={{
+                        borderColor: tag.color,
+                        color: isActive ? '#fff' : tag.color,
+                        backgroundColor: isActive ? tag.color : 'transparent',
+                      }}
+                      title={isActive ? `Retirer le filtre ${tag.name}` : `Filtrer par ${tag.name}`}
+                    >
+                      {tag.name}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-parchment-500 mt-2">
+                Filtre par vos tags globaux (assignés depuis n&apos;importe quel deck ou la modal d&apos;une carte).
+              </p>
+            </FilterSection>
+          )}
         </div>
       </div>
 

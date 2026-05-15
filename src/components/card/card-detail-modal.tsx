@@ -5,18 +5,16 @@ import Image from 'next/image'
 import { CardWithPrice } from '@/types/scryfall'
 import { formatPrice, formatBestPrice, getBestPrice, getRarityColor, parseManaSymbols, getManaSymbolUrl, PriceData } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Plus, Minus, Heart, Archive, ExternalLink, Loader2, Sparkles, Crown, Star, TrendingDown, TrendingUp, Coins, RotateCw, ChevronLeft, ChevronRight, Zap, ShoppingCart, PackageCheck, Trash2, ArrowRightCircle, Layers, Printer } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AddToDeckModal } from './add-to-deck-modal'
 import { useQuickAdd } from '@/contexts/quick-add'
 import { useActiveOwner } from '@/contexts/active-owner'
+import { CardTagInlinePicker, OracleCardTagInlinePicker } from '@/components/deck/card-tag-picker'
+import { Tag as TagIcon } from 'lucide-react'
 
 interface CardVersion {
   id: string
@@ -63,10 +61,13 @@ interface WantlistItemData {
 }
 
 interface DeckCardData {
+  id?: string // DeckCard.id — requis pour le tag picker
   deckId: string
   cardId: string
   quantity: number
   category: string
+  tags?: { id: string; name: string; color: string; scope: 'global' | 'deck' }[]
+  availableTags?: { id: string; name: string; color: string; scope: 'global' | 'deck' }[]
 }
 
 interface CardDetailModalProps {
@@ -641,83 +642,95 @@ export function CardDetailModal({
   const showNavigation = (onPrev || onNext) || (cards && cards.length > 1 && onNavigate)
 
   return (
-    <Dialog open={!!card} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
-        {/* Navigation Arrows */}
-        {showNavigation && (
-          <>
-            {/* Left Arrow */}
+    <>
+      <Sheet open={!!card} onOpenChange={() => onClose()}>
+      <SheetContent side="right" className="p-0 flex flex-col">
+        {/* Header sticky : nav prev/next + titre + mana cost + compteur + close */}
+        <header className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 border-b border-dungeon-700 bg-dungeon-900/80 backdrop-blur-md pr-12">
+          {showNavigation && (
             <button
+              type="button"
               onClick={goToPrev}
               disabled={!canGoPrev}
               className={cn(
-                "fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 z-[60]",
-                "w-10 h-10 sm:w-12 sm:h-12 rounded-full",
-                "bg-dungeon-800/90 backdrop-blur-sm border-2 border-gold-600/40",
-                "flex items-center justify-center",
-                "transition-all duration-200",
-                canGoPrev 
-                  ? "text-gold-400 hover:bg-gold-600/20 hover:border-gold-500 hover:scale-110 active:scale-95" 
-                  : "text-dungeon-600 cursor-not-allowed opacity-50"
+                'w-8 h-8 rounded-md border flex items-center justify-center transition-colors shrink-0',
+                canGoPrev
+                  ? 'text-gold-400 border-gold-600/40 hover:bg-gold-600/20'
+                  : 'text-dungeon-600 border-dungeon-700 cursor-not-allowed opacity-50'
               )}
-              title="Previous card (←)"
+              title="Carte précédente (←)"
             >
-              <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
-
-            {/* Right Arrow */}
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-semibold text-gold-400 font-medieval truncate">
+                {card.printedName || card.name}
+              </h2>
+              {manaSymbols.length > 0 && (
+                <span className="flex gap-0.5 shrink-0">
+                  {manaSymbols.map((symbol, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={i}
+                      src={getManaSymbolUrl(symbol)}
+                      alt={symbol}
+                      className="w-4 h-4"
+                    />
+                  ))}
+                </span>
+              )}
+            </div>
+            {card.printedName && card.printedName !== card.name && (
+              <p className="text-[11px] text-parchment-500 truncate">{card.name}</p>
+            )}
+          </div>
+          {currentIndex !== undefined && total !== undefined && (
+            <span className="text-[11px] text-parchment-400 shrink-0 px-2 py-1 rounded bg-dungeon-800 border border-dungeon-700">
+              <span className="text-gold-400 font-medium">{currentIndex}</span>
+              <span className="mx-1">/</span>
+              <span>{total}</span>
+            </span>
+          )}
+          {showNavigation && (
             <button
+              type="button"
               onClick={goToNext}
               disabled={!canGoNext}
               className={cn(
-                "fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 z-[60]",
-                "w-10 h-10 sm:w-12 sm:h-12 rounded-full",
-                "bg-dungeon-800/90 backdrop-blur-sm border-2 border-gold-600/40",
-                "flex items-center justify-center",
-                "transition-all duration-200",
-                canGoNext 
-                  ? "text-gold-400 hover:bg-gold-600/20 hover:border-gold-500 hover:scale-110 active:scale-95" 
-                  : "text-dungeon-600 cursor-not-allowed opacity-50"
+                'w-8 h-8 rounded-md border flex items-center justify-center transition-colors shrink-0',
+                canGoNext
+                  ? 'text-gold-400 border-gold-600/40 hover:bg-gold-600/20'
+                  : 'text-dungeon-600 border-dungeon-700 cursor-not-allowed opacity-50'
               )}
-              title="Next card (→)"
+              title="Carte suivante (→)"
             >
-              <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7" />
+              <ChevronRight className="w-5 h-5" />
             </button>
-
-            {/* Card Counter */}
-            {currentIndex !== undefined && total !== undefined && (
-              <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-3 py-1.5 rounded-full bg-dungeon-800/90 backdrop-blur-sm border border-gold-600/30 text-xs sm:text-sm text-parchment-400">
-                <span className="text-gold-400 font-medium">{currentIndex}</span>
-                <span className="mx-1">/</span>
-                <span>{total}</span>
-              </div>
-            )}
-          </>
-        )}
-
-        <DialogHeader className="pr-8">
-          <DialogTitle className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <span className="text-base sm:text-lg">{card.printedName || card.name}</span>
-            {manaSymbols.length > 0 && (
-              <span className="flex gap-0.5">
-                {manaSymbols.map((symbol, i) => (
-                  <img
-                    key={i}
-                    src={getManaSymbolUrl(symbol)}
-                    alt={symbol}
-                    className="w-4 h-4 sm:w-5 sm:h-5"
-                  />
-                ))}
-              </span>
-            )}
-          </DialogTitle>
-          {card.printedName && card.printedName !== card.name && (
-            <p className="text-xs sm:text-sm text-parchment-400">{card.name}</p>
           )}
-        </DialogHeader>
+        </header>
 
-        <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-          {/* Left Column: Card Image + Versions Gallery */}
+        {/* Onglets internes */}
+        <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
+          <div className="px-4 pt-3">
+            <TabsList className="flex w-full">
+              <TabsTrigger value="overview" className="flex-1">Aperçu</TabsTrigger>
+              <TabsTrigger value="editions" className="flex-1">
+                Éditions
+                {versions.length > 1 && (
+                  <span className="ml-1 text-[10px] opacity-70">({versions.length})</span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="prices" className="flex-1">Prix</TabsTrigger>
+              <TabsTrigger value="tags" className="flex-1">Tags &amp; Decks</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-3">
+            {/* ============ APERÇU ============ */}
+            <TabsContent value="overview" className="mt-0">
+              <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-3 sm:space-y-4">
             {/* Main Card Image - Smaller on mobile */}
             <div className="relative aspect-[488/680] rounded-lg overflow-hidden bg-dungeon-800 max-w-[200px] sm:max-w-none mx-auto sm:mx-0">
@@ -777,150 +790,6 @@ export function CardDetailModal({
               </button>
             )}
 
-            {/* Base Versions Gallery - Responsive grid */}
-            {baseVersions.length > 1 && (
-              <div>
-                <h3 className="text-xs sm:text-sm font-semibold text-parchment-400 mb-1.5 sm:mb-2 flex items-center gap-2">
-                  Editions
-                  <span className="text-[10px] sm:text-xs text-dungeon-400">({baseVersions.length})</span>
-                  {loadingVersions && <Loader2 className="w-3 h-3 animate-spin" />}
-                </h3>
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2 max-h-[100px] sm:max-h-[120px] overflow-y-auto pr-1">
-                  {baseVersions.map((version) => {
-                    const isSelected = selectedVersion?.id === version.id
-                    const isOriginal = version.id === card.id && !selectedVersion
-                    
-                    return (
-                      <button
-                        key={version.id}
-                        onClick={() => handleVersionClick(version)}
-                        className={cn(
-                          'relative aspect-[488/680] rounded overflow-hidden bg-dungeon-700 transition-all',
-                          'active:scale-95',
-                          isSelected && 'ring-2 ring-gold-400',
-                          isOriginal && !selectedVersion && 'ring-2 ring-parchment-400/50'
-                        )}
-                        title={`${version.setName} (${version.setCode.toUpperCase()})`}
-                      >
-                        {version.imageSmall || version.imageNormal ? (
-                          (version.imageSmall || version.imageNormal!).startsWith('/api/custom-sets/') ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={version.imageSmall || version.imageNormal!}
-                              alt={`${version.name} - ${version.setCode}`}
-                              className="absolute inset-0 w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Image
-                              src={version.imageSmall || version.imageNormal!}
-                              alt={`${version.name} - ${version.setCode}`}
-                              fill
-                              className="object-cover"
-                              sizes="60px"
-                            />
-                          )
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-[8px] text-dungeon-500">
-                            ?
-                          </div>
-                        )}
-                        {/* Set code + price overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-0.5 sm:p-1">
-                          <span className="text-[7px] sm:text-[8px] text-parchment-200 uppercase font-medium block">
-                            {version.setCode}
-                          </span>
-                          {getBestPrice(versionToPriceData(version)) && (
-                            <span className="text-[6px] sm:text-[7px] text-gold-400 font-medium">
-                              {formatBestPrice(versionToPriceData(version))}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Alternate Art Versions Gallery - Collapsible on mobile */}
-            {altArtVersions.length > 0 && (
-              <details className="group" open={altArtVersions.length <= 5}>
-                <summary className="text-xs sm:text-sm font-semibold text-arcane-400 mb-1.5 sm:mb-2 flex items-center gap-2 cursor-pointer list-none">
-                  <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
-                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Alternate Arts
-                  <span className="text-[10px] sm:text-xs text-dungeon-400">({altArtVersions.length})</span>
-                </summary>
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2 max-h-[120px] sm:max-h-[180px] overflow-y-auto pr-1 mt-1.5">
-                  {altArtVersions.map((version) => {
-                    const isSelected = selectedVersion?.id === version.id
-                    const frameLabel = getFrameLabel(version)
-                    
-                    return (
-                      <button
-                        key={version.id}
-                        onClick={() => handleVersionClick(version)}
-                        className={cn(
-                          'relative aspect-[488/680] rounded overflow-hidden bg-dungeon-700 transition-all',
-                          'active:scale-95',
-                          isSelected && 'ring-2 ring-arcane-400',
-                        )}
-                        title={`${frameLabel ? `[${frameLabel}] ` : ''}${version.setCode.toUpperCase()}`}
-                      >
-                        {version.imageSmall || version.imageNormal ? (
-                          (version.imageSmall || version.imageNormal!).startsWith('/api/custom-sets/') ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={version.imageSmall || version.imageNormal!}
-                              alt={`${version.name} - ${version.setCode}`}
-                              className="absolute inset-0 w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Image
-                              src={version.imageSmall || version.imageNormal!}
-                              alt={`${version.name} - ${version.setCode}`}
-                              fill
-                              className="object-cover"
-                              sizes="60px"
-                            />
-                          )
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-[8px] text-dungeon-500">
-                            ?
-                          </div>
-                        )}
-                        
-                        {/* Frame effect indicator */}
-                        {frameLabel && (
-                          <div className="absolute top-0 right-0 p-0.5 bg-arcane-600/90 rounded-bl">
-                            {getFrameIcon(version) || <Sparkles className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />}
-                          </div>
-                        )}
-                        
-                        {/* Set code + price overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-0.5 sm:p-1">
-                          <span className="text-[7px] sm:text-[8px] text-parchment-200 uppercase font-medium block truncate">
-                            {version.setCode}
-                          </span>
-                          {getBestPrice(versionToPriceData(version)) && (
-                            <span className="text-[6px] sm:text-[7px] text-arcane-300 font-medium">
-                              {formatBestPrice(versionToPriceData(version))}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </details>
-            )}
-            
-            {loadingVersions && versions.length === 0 && (
-              <div className="flex items-center justify-center py-3 sm:py-4 text-parchment-400 text-xs sm:text-sm">
-                <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mr-2" />
-                Loading...
-              </div>
-            )}
           </div>
 
           {/* Right Column: Card Details */}
@@ -1014,18 +883,171 @@ export function CardDetailModal({
                 </p>
               )}
             </div>
+          </div>
+              </div>
+            </TabsContent>
 
-            {/* Prices Section - Enhanced with price comparison */}
-            <PriceSection 
-              versions={versions}
-              selectedVersion={selectedVersion}
-              card={card}
-              displayPriceEur={displayPriceEur}
-              displayPriceEurFoil={displayPriceEurFoil}
-              displayPriceUsd={displayPriceUsd}
-              displayPriceUsdFoil={displayPriceUsdFoil}
-              onVersionSelect={handleVersionClick}
-            />
+            {/* ============ ÉDITIONS ============ */}
+            <TabsContent value="editions" className="mt-0 space-y-4">
+              {loadingVersions && versions.length === 0 ? (
+                <div className="flex items-center justify-center py-8 text-parchment-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Chargement des éditions…
+                </div>
+              ) : versions.length <= 1 ? (
+                <p className="text-sm text-parchment-500 italic text-center py-6">
+                  Une seule édition disponible pour cette carte.
+                </p>
+              ) : null}
+
+              {baseVersions.length > 1 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-parchment-300 mb-2 flex items-center gap-2">
+                    Éditions standard
+                    <span className="text-xs text-dungeon-400">({baseVersions.length})</span>
+                    {loadingVersions && <Loader2 className="w-3 h-3 animate-spin" />}
+                  </h3>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[40vh] overflow-y-auto pr-1">
+                    {baseVersions.map((version) => {
+                      const isSelected = selectedVersion?.id === version.id
+                      const isOriginal = version.id === card.id && !selectedVersion
+                      return (
+                        <button
+                          key={version.id}
+                          onClick={() => handleVersionClick(version)}
+                          className={cn(
+                            'relative aspect-[488/680] rounded overflow-hidden bg-dungeon-700 transition-all active:scale-95',
+                            isSelected && 'ring-2 ring-gold-400',
+                            isOriginal && !selectedVersion && 'ring-2 ring-parchment-400/50'
+                          )}
+                          title={`${version.setName} (${version.setCode.toUpperCase()})`}
+                        >
+                          {version.imageSmall || version.imageNormal ? (
+                            (version.imageSmall || version.imageNormal!).startsWith('/api/custom-sets/') ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={version.imageSmall || version.imageNormal!}
+                                alt={`${version.name} - ${version.setCode}`}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Image
+                                src={version.imageSmall || version.imageNormal!}
+                                alt={`${version.name} - ${version.setCode}`}
+                                fill
+                                className="object-cover"
+                                sizes="80px"
+                              />
+                            )
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-[8px] text-dungeon-500">?</div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-1">
+                            <span className="text-[9px] text-parchment-200 uppercase font-medium block">{version.setCode}</span>
+                            {getBestPrice(versionToPriceData(version)) && (
+                              <span className="text-[8px] text-gold-400 font-medium">
+                                {formatBestPrice(versionToPriceData(version))}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {altArtVersions.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-arcane-400 mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Arts alternatifs
+                    <span className="text-xs text-dungeon-400">({altArtVersions.length})</span>
+                  </h3>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[40vh] overflow-y-auto pr-1">
+                    {altArtVersions.map((version) => {
+                      const isSelected = selectedVersion?.id === version.id
+                      const frameLabel = getFrameLabel(version)
+                      return (
+                        <button
+                          key={version.id}
+                          onClick={() => handleVersionClick(version)}
+                          className={cn(
+                            'relative aspect-[488/680] rounded overflow-hidden bg-dungeon-700 transition-all active:scale-95',
+                            isSelected && 'ring-2 ring-arcane-400'
+                          )}
+                          title={`${frameLabel ? `[${frameLabel}] ` : ''}${version.setCode.toUpperCase()}`}
+                        >
+                          {version.imageSmall || version.imageNormal ? (
+                            (version.imageSmall || version.imageNormal!).startsWith('/api/custom-sets/') ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={version.imageSmall || version.imageNormal!}
+                                alt={`${version.name} - ${version.setCode}`}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Image
+                                src={version.imageSmall || version.imageNormal!}
+                                alt={`${version.name} - ${version.setCode}`}
+                                fill
+                                className="object-cover"
+                                sizes="80px"
+                              />
+                            )
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-[8px] text-dungeon-500">?</div>
+                          )}
+                          {frameLabel && (
+                            <div className="absolute top-0 right-0 p-0.5 bg-arcane-600/90 rounded-bl">
+                              {getFrameIcon(version) || <Sparkles className="w-2.5 h-2.5 text-white" />}
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-1">
+                            <span className="text-[9px] text-parchment-200 uppercase font-medium block truncate">{version.setCode}</span>
+                            {getBestPrice(versionToPriceData(version)) && (
+                              <span className="text-[8px] text-arcane-300 font-medium">
+                                {formatBestPrice(versionToPriceData(version))}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ============ PRIX ============ */}
+            <TabsContent value="prices" className="mt-0">
+              <PriceSection
+                versions={versions}
+                selectedVersion={selectedVersion}
+                card={card}
+                displayPriceEur={displayPriceEur}
+                displayPriceEurFoil={displayPriceEurFoil}
+                displayPriceUsd={displayPriceUsd}
+                displayPriceUsdFoil={displayPriceUsdFoil}
+                onVersionSelect={handleVersionClick}
+              />
+            </TabsContent>
+
+            {/* ============ TAGS & DECKS ============ */}
+            <TabsContent value="tags" className="mt-0 space-y-4">
+              {/* Tags globaux (hors deck) : assignation par oracleId */}
+              {!deckCard && card?.oracleId && (
+              <div className="bg-dungeon-800/40 border border-dungeon-600/40 rounded-lg p-3 sm:p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <TagIcon className="w-4 h-4 text-arcane-400" />
+                  <h3 className="text-sm font-semibold text-parchment-200">Tags</h3>
+                  <span className="text-[10px] text-parchment-500">
+                    globaux — visibles dans tous tes decks & filtres
+                  </span>
+                </div>
+                <OracleCardTagInlinePicker oracleId={card.oracleId} />
+              </div>
+            )}
 
             {/* Deck Actions - Only shown for deck items */}
             {deckCard && (
@@ -1075,6 +1097,22 @@ export function CardDetailModal({
                     Remove
                   </Button>
                 </div>
+
+                {/* Tags section — affichée si on a l'id du DeckCard et la liste des tags dispos */}
+                {deckCard.id && deckCard.availableTags !== undefined && (
+                  <div className="pt-3 border-t border-arcane-600/30 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <TagIcon className="w-3.5 h-3.5 text-arcane-400" />
+                      <span className="text-xs font-semibold text-arcane-300">Tags</span>
+                    </div>
+                    <CardTagInlinePicker
+                      deckId={deckCard.deckId}
+                      deckCardId={deckCard.id}
+                      assigned={deckCard.tags ?? []}
+                      available={deckCard.availableTags}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -1314,19 +1352,21 @@ export function CardDetailModal({
                 </Button>
               </div>
             </div>
+            </TabsContent>
           </div>
-        </div>
+        </Tabs>
+      </SheetContent>
+      </Sheet>
 
-        {/* Add to Deck Modal - uses selected version if available */}
-        <AddToDeckModal
-          open={showAddToDeck}
-          onClose={() => setShowAddToDeck(false)}
-          cardId={selectedVersion?.id || card.id}
-          cardName={selectedVersion?.printedName || selectedVersion?.name || card.printedName || card.name}
-          onSuccess={onCardAddedToDeck}
-        />
-      </DialogContent>
-    </Dialog>
+      {/* Add to Deck Modal - uses selected version if available */}
+      <AddToDeckModal
+        open={showAddToDeck}
+        onClose={() => setShowAddToDeck(false)}
+        cardId={selectedVersion?.id || card.id}
+        cardName={selectedVersion?.printedName || selectedVersion?.name || card.printedName || card.name}
+        onSuccess={onCardAddedToDeck}
+      />
+    </>
   )
 }
 

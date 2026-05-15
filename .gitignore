@@ -43,7 +43,12 @@ temp/
 
 # Backups & SQL dumps
 backups/
+backup_*/
+*.dump
 *.sql
+# ...mais les migrations Prisma DOIVENT être trackées (sinon les autres devs
+# ne peuvent pas appliquer le schéma).
+!prisma/migrations/**/*.sql
 
 # PWA generated files
 public/sw.js

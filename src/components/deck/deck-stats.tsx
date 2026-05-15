@@ -240,7 +240,7 @@ export function DeckStats({ cards }: DeckStatsProps) {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4">
       {/* CMC Histogram */}
       <div className="card-frame p-4">
         <h3 className="font-medieval text-lg text-gold-400 mb-2">Mana Curve</h3>

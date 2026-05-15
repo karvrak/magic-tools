@@ -158,6 +158,8 @@ export function SearchPage() {
     if (debouncedFilters.newnessSince) params.set('newnessSince', debouncedFilters.newnessSince)
     // Custom sets filter
     if (debouncedFilters.customSets) params.set('customSets', 'true')
+    // User card tags filter (global tags)
+    if (debouncedFilters.cardTagIds.length) params.set('cardTagIds', debouncedFilters.cardTagIds.join(','))
 
     return params.toString()
   }, [debouncedFilters, page, pageSize])
@@ -179,7 +181,8 @@ export function SearchPage() {
     filters.priceMaxEur !== null ||
     filters.keywords.length > 0 ||
     filters.newness !== null ||
-    filters.customSets
+    filters.customSets ||
+    filters.cardTagIds.length > 0
   )
 
   // Check if debounced filters are ready for API call
@@ -199,7 +202,8 @@ export function SearchPage() {
     debouncedFilters.priceMaxEur !== null ||
     debouncedFilters.keywords.length > 0 ||
     debouncedFilters.newness !== null ||
-    debouncedFilters.customSets
+    debouncedFilters.customSets ||
+    debouncedFilters.cardTagIds.length > 0
   )
 
   // Fetch newness stats for the tabs

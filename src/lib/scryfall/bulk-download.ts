@@ -1,5 +1,5 @@
 import { ScryfallBulkData, ScryfallCard } from '@/types/scryfall'
-import { createWriteStream, createReadStream, unlinkSync, existsSync, mkdirSync } from 'fs'
+import { createWriteStream, createReadStream, unlinkSync, existsSync, mkdirSync, statSync } from 'fs'
 import path from 'path'
 import { parser } from 'stream-json'
 import { streamArray } from 'stream-json/streamers/StreamArray'
@@ -119,29 +119,34 @@ export function cleanupTempFile(type: BulkDataType): void {
 }
 
 /**
- * Downloads bulk data and returns path to temp file
- * If skipIfExists is true and file exists, skips download
+ * Downloads bulk data and returns path to temp file.
+ * If skipIfFresh is true and the local file is newer than Scryfall's updated_at, skips download.
  */
-export async function downloadBulkData(type: BulkDataType, skipIfExists: boolean = false): Promise<string> {
+export async function downloadBulkData(type: BulkDataType, skipIfFresh: boolean = false): Promise<string> {
   const filePath = path.join(TEMP_DIR, `${type}.json`)
-  
-  // Check if file already exists and skip download if requested
-  if (skipIfExists && existsSync(filePath)) {
-    console.log(`[BULK] File already exists, skipping download: ${filePath}`)
-    return filePath
-  }
-  
+
   console.log(`[BULK] Starting download of ${type}...`)
-  
+
   const info = await getBulkDataInfo(type)
   if (!info) {
     throw new Error(`Bulk data type ${type} not found`)
   }
 
+  // Reuse local file only if it was modified after Scryfall's last update
+  if (skipIfFresh && existsSync(filePath)) {
+    const localMtime = statSync(filePath).mtime
+    const remoteUpdatedAt = new Date(info.updatedAt)
+    if (localMtime >= remoteUpdatedAt) {
+      console.log(`[BULK] Local file is fresh (mtime=${localMtime.toISOString()} >= remote=${remoteUpdatedAt.toISOString()}), skipping download`)
+      return filePath
+    }
+    console.log(`[BULK] Local file is stale (mtime=${localMtime.toISOString()} < remote=${remoteUpdatedAt.toISOString()}), re-downloading`)
+  }
+
   console.log(`[BULK] Downloading from ${info.downloadUri} (${Math.round(info.size / 1024 / 1024)}MB)`)
 
   await downloadToFile(info.downloadUri, filePath, info.size)
-  
+
   return filePath
 }
 

@@ -55,6 +55,30 @@ export async function GET(request: NextRequest) {
     const isFoil = searchParams.get('isFoil')
     const sortBy = searchParams.get('sortBy') || 'date' // 'date' | 'name' | 'price' | 'cmc' | 'rarity'
     const sortDir = searchParams.get('sortDir') || 'desc' // 'asc' | 'desc'
+    const cardTagIds = searchParams.get('cardTagIds')?.split(',').filter(Boolean) || []
+
+    // Si l'utilisateur filtre par tags, on précalcule les oracleIds taggés.
+    // OR semantics: au moins un des tags sélectionnés présent sur la carte.
+    let taggedOracleIds: string[] | null = null
+    if (cardTagIds.length > 0) {
+      const rows = await prisma.userCardTag.findMany({
+        where: { userId, cardTagId: { in: cardTagIds } },
+        select: { oracleId: true },
+        distinct: ['oracleId'],
+      })
+      taggedOracleIds = rows.map((r) => r.oracleId)
+      if (taggedOracleIds.length === 0) {
+        return NextResponse.json({
+          items: [],
+          total: 0,
+          page,
+          pageSize,
+          hasMore: false,
+          owned: { count: 0, cards: 0, price: 0 },
+          wanted: { count: 0, cards: 0, price: 0 },
+        })
+      }
+    }
 
     // Resolve the effective ownerId filter respecting user scope.
     // If a user passes an ownerIdParam, validate it is within their allowed ownerIds.
@@ -129,6 +153,10 @@ export async function GET(request: NextRequest) {
         conditions.cmc = {}
         if (cmcMin !== null) (conditions.cmc as Record<string, number>).gte = cmcMin
         if (cmcMax !== null) (conditions.cmc as Record<string, number>).lte = cmcMax
+      }
+
+      if (taggedOracleIds !== null) {
+        conditions.oracleId = { in: taggedOracleIds }
       }
 
       return Object.keys(conditions).length > 0 ? conditions : undefined

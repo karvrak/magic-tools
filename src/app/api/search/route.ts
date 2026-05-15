@@ -4,6 +4,7 @@ import { buildPriceFilter, normalizeString } from '@/lib/search/query-builder'
 import { SearchFilters } from '@/types/search'
 import { CardWithPrice } from '@/types/scryfall'
 import { normalizeForSearch } from '@/lib/scryfall/bulk-download'
+import { getRequestUser } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,6 +39,8 @@ export async function GET(request: NextRequest) {
       newnessSince: searchParams.get('newnessSince') || undefined,
       // Custom sets filter
       customSets: searchParams.get('customSets') === 'true',
+      // Card tags filter (CSV ids) — OR semantics: au moins un des tags assignés
+      cardTagIds: searchParams.get('cardTagIds')?.split(',').filter(Boolean) || [],
     }
 
     // Sort options
@@ -201,6 +204,28 @@ async function handleDeduplicatedSearch(
     whereConditions.push(`"setCode" LIKE 'cus_%'`)
   }
 
+  // Card tags filter — restreint aux oracleIds qui ont au moins un des tags
+  // assignés (UserCardTag) par l'utilisateur courant.
+  if (filters.cardTagIds && filters.cardTagIds.length > 0) {
+    const { userId } = await getRequestUser()
+    const taggedOracleIds = await prisma.userCardTag.findMany({
+      where: { userId, cardTagId: { in: filters.cardTagIds } },
+      select: { oracleId: true },
+      distinct: ['oracleId'],
+    })
+    if (taggedOracleIds.length === 0) {
+      return NextResponse.json({
+        cards: [],
+        total: 0,
+        page,
+        pageSize,
+        hasMore: false,
+      })
+    }
+    const ids = taggedOracleIds.map((r) => r.oracleId.replace(/'/g, "''"))
+    whereConditions.push(`"oracleId" IN (${ids.map((id) => `'${id}'`).join(',')})`)
+  }
+
   // Newness filter (new cards / new artworks)
   if (filters.newness) {
     const newnessType = filters.newness === 'new_card' ? "'NEW_CARD'"
@@ -264,14 +289,28 @@ async function handleDeduplicatedSearch(
 
   // Main query with DISTINCT ON to get one version per oracleId
   // Uses a subquery to first select the best version, then applies final sorting
+  // Explicit column list — exclut "embedding" (vector(1536), Prisma raw ne sait
+  // pas le deserialiser).
+  const cardColumns = `
+    "id", "oracleId", "illustrationId", "name", "printedName", "nameNormalized",
+    "lang", "layout", "manaCost", "cmc", "typeLine", "printedTypeLine",
+    "oracleText", "printedText", "flavorText", "colors", "colorIdentity",
+    "keywords", "setCode", "setName", "collectorNumber", "rarity",
+    "imageSmall", "imageNormal", "imageLarge", "imageArtCrop", "imageBorderCrop",
+    "imageNormalBack", "imageLargeBack", "power", "toughness", "loyalty",
+    "legalities", "games", "isPromo", "isBooster", "frameEffects",
+    "isFullArt", "isTextless", "isVariation",
+    "priceEur", "priceEurFoil", "priceUsd", "priceUsdFoil",
+    "releasedAt", "syncedAt"
+  `
   const selectQuery = `
     WITH best_versions AS (
-      SELECT DISTINCT ON ("oracleId") *
+      SELECT DISTINCT ON ("oracleId") ${cardColumns}
       FROM "Card"
       ${whereClause}
       ORDER BY ${priorityOrder}
     )
-    SELECT * FROM best_versions
+    SELECT ${cardColumns} FROM best_versions
     ORDER BY ${orderColumn} ${orderDir}
     LIMIT ${pageSize} OFFSET ${skip}
   `

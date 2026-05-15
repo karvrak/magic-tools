@@ -3,9 +3,10 @@
 import { use, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Image from 'next/image'
-import { Layers, Scroll, Sparkles, ExternalLink } from 'lucide-react'
+import { Layers, Scroll, Sparkles } from 'lucide-react'
 import { formatPrice, getBestPrice, getRarityColor } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { HoverPreviewProvider, WithHoverPreview } from '@/components/card/card-hover-preview'
 
 interface SharedCard {
   quantity: number
@@ -81,13 +82,19 @@ export default function SharedDeckPage({ params }: { params: Promise<{ token: st
     return { totalCards, totalMainboard, totalSideboard, totalCommander, totalLands }
   }, [deck])
 
+  // Merge cards by name within each category (different editions → single line)
   const groupedCards = useMemo(() => {
     if (!deck) return {}
     const groups: Record<string, SharedCard[]> = {}
     for (const card of deck.cards) {
       const cat = card.category
       if (!groups[cat]) groups[cat] = []
-      groups[cat].push(card)
+      const existing = groups[cat].find((c) => c.card.name === card.card.name)
+      if (existing) {
+        existing.quantity += card.quantity
+      } else {
+        groups[cat].push({ ...card })
+      }
     }
     return groups
   }, [deck])
@@ -124,6 +131,7 @@ export default function SharedDeckPage({ params }: { params: Promise<{ token: st
   }
 
   return (
+    <HoverPreviewProvider>
     <div className="min-h-screen bg-dungeon-950">
       {/* Header */}
       <header className="border-b-2 border-gold-700/30 bg-dungeon-900/98 backdrop-blur-md">
@@ -229,8 +237,9 @@ export default function SharedDeckPage({ params }: { params: Promise<{ token: st
                   const displayName = card.printedName || card.name
 
                   return (
-                    <div
+                    <WithHoverPreview
                       key={`${cat}-${i}`}
+                      card={{ name: displayName, image: card.imageNormal }}
                       className="flex items-center gap-3 px-3 py-2 hover:bg-dungeon-700/50 transition-colors"
                     >
                       {/* Quantity */}
@@ -258,7 +267,6 @@ export default function SharedDeckPage({ params }: { params: Promise<{ token: st
                         </p>
                         <p className="text-xs text-parchment-600 truncate">
                           {card.printedTypeLine || card.typeLine}
-                          <span className="ml-2 opacity-60">{card.setCode.toUpperCase()}</span>
                         </p>
                       </div>
 
@@ -273,7 +281,7 @@ export default function SharedDeckPage({ params }: { params: Promise<{ token: st
                       <span className="text-xs text-parchment-500 flex-shrink-0 w-16 text-right">
                         {best ? formatPrice(best.value * dc.quantity, best.currency) : ''}
                       </span>
-                    </div>
+                    </WithHoverPreview>
                   )
                 })}
               </div>
@@ -290,5 +298,6 @@ export default function SharedDeckPage({ params }: { params: Promise<{ token: st
         </div>
       </main>
     </div>
+    </HoverPreviewProvider>
   )
 }

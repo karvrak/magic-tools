@@ -1,18 +1,18 @@
 'use client'
 
-import { use, useState, useMemo, useCallback } from 'react'
+import { use, useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import Image from 'next/image'
-import { 
-  ArrowLeft, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  Search, 
-  Download, 
-  ExternalLink, 
-  Settings2, 
+import {
+  ArrowLeft,
+  Plus,
+  Minus,
+  Trash2,
+  Search,
+  Download,
+  ExternalLink,
+  Settings2,
   BookOpen,
   LayoutGrid,
   List,
@@ -30,6 +30,14 @@ import {
   Share2,
   Link2,
   Link2Off,
+  Lock,
+  Unlock,
+  Hammer,
+  BarChart3,
+  Library,
+  Sparkles,
+  Wand2,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -57,8 +65,14 @@ import { DeckStats } from '@/components/deck/deck-stats'
 import { DeckVisualView } from '@/components/deck/deck-visual-view'
 import { SimulationStats } from '@/components/deck/simulation-stats'
 import { DeckAvailability } from '@/components/deck/deck-availability'
-import { DeckSuggestions } from '@/components/deck/deck-suggestions'
+import { DeckAIComplete } from '@/components/deck/deck-ai-complete'
+import { CardTagManager } from '@/components/deck/card-tag-manager'
+import { CardTagPicker, CardTagBadge } from '@/components/deck/card-tag-picker'
+import { CardTagStats } from '@/components/deck/card-tag-stats'
+import type { CardTag as CardTagType, CardTagStat } from '@/components/deck/card-tags-types'
 import { CardDetailModal } from '@/components/card/card-detail-modal'
+import { CollapsibleModule } from '@/components/deck/collapsible-module'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { useAuthUser } from '@/contexts/auth-user'
 import { SetSelector } from '@/components/card/set-selector'
 import { CardWithPrice } from '@/types/scryfall'
@@ -72,6 +86,7 @@ interface DeckCard {
   quantity: number
   category: string
   card: CardWithPrice
+  tags?: CardTagType[]
 }
 
 const EXPORT_FORMATS = [
@@ -98,11 +113,14 @@ interface DeckDetail {
   description: string | null
   format: string | null
   coverImage: string | null
+  status: 'building' | 'active' | 'locked'
   owner: Owner | null
   tags: Tag[]
   cards: DeckCard[]
   totalPrice: number
   minTotalPrice: number
+  availableCardTags?: CardTagType[]
+  tagStats?: CardTagStat[]
 }
 
 export default function DeckDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -128,6 +146,12 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [groupBy, setGroupBy] = useState<GroupBy>('cmc')
+
+  // Card-tag filter state (multi-select) + manager modal
+  const [activeCardTagIds, setActiveCardTagIds] = useState<string[]>([])
+  const [showCardTagManager, setShowCardTagManager] = useState(false)
+  // Drawer mobile pour le side-rail (visible sur <lg).
+  const [showMobileRail, setShowMobileRail] = useState(false)
 
   // Fetch owners for the edit modal
   const { data: ownersData } = useQuery<{ owners: Owner[] }>({
@@ -442,6 +466,36 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
     },
   })
 
+  // Toggle deck status (building <-> locked)
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (newStatus: 'building' | 'locked') => {
+      const response = await fetch(`/api/decks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!response.ok) throw new Error('Failed to update status')
+      return response.json()
+    },
+    onSuccess: (_, newStatus) => {
+      queryClient.invalidateQueries({ queryKey: ['deck', id] })
+      queryClient.invalidateQueries({ queryKey: ['decks'] })
+      toast({
+        title: newStatus === 'locked' ? 'Deck locked' : 'Deck unlocked',
+        description: newStatus === 'locked'
+          ? 'This deck is now locked and hidden from add-to-deck.'
+          : 'This deck is now in building mode.',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Could not update deck status.',
+        variant: 'destructive',
+      })
+    },
+  })
+
   // Change card edition mutation
   const changeEditionMutation = useMutation({
     mutationFn: async ({
@@ -518,6 +572,17 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
     }
   }, [selectedDeckCardIndex, orderedDeckCards])
 
+  // Quand on tague une carte depuis la modal, `data.deck.cards` est refetché
+  // mais `selectedDeckCard` pointe encore vers l'ancien objet (sans le nouveau
+  // tag). On resynchronise sur l'ID pour que la modal reflète l'état à jour.
+  useEffect(() => {
+    if (!selectedDeckCard) return
+    const fresh = orderedDeckCards.find((c) => c.id === selectedDeckCard.id)
+    if (fresh && fresh !== selectedDeckCard) {
+      setSelectedDeckCard(fresh)
+    }
+  }, [orderedDeckCards, selectedDeckCard])
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -543,14 +608,21 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
 
   const deck = data.deck
 
+  // Apply card-tag filter (OR semantics: au moins un des tags sélectionnés).
+  const visibleCards = activeCardTagIds.length === 0
+    ? deck.cards
+    : deck.cards.filter((c) => c.tags?.some((t) => activeCardTagIds.includes(t.id)) ?? false)
+
   // Group cards by category
   const cardsByCategory = CARD_CATEGORIES.reduce((acc, cat) => {
-    acc[cat.code] = deck.cards.filter((c) => c.category === cat.code)
+    acc[cat.code] = visibleCards.filter((c) => c.category === cat.code)
     return acc
   }, {} as Record<string, DeckCard[]>)
 
-  // Calculate total cards
+  // Calculate total cards (unaffected by filter — represente le deck total)
   const totalCards = deck.cards.reduce((sum, c) => sum + c.quantity, 0)
+  const availableCardTags = deck.availableCardTags ?? []
+  const tagStats = deck.tagStats ?? []
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -793,7 +865,28 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
           </button>
 
           <div className="flex-1 min-w-0">
-            <h1 className="font-medieval text-xl sm:text-2xl md:text-3xl text-gold-400 truncate">{deck.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-medieval text-xl sm:text-2xl md:text-3xl text-gold-400 truncate">{deck.name}</h1>
+              <button
+                onClick={() => toggleStatusMutation.mutate(
+                  deck.status === 'locked' ? 'building' : 'locked'
+                )}
+                disabled={toggleStatusMutation.isPending}
+                className={cn(
+                  "p-1.5 rounded-md border transition-all",
+                  deck.status === 'locked'
+                    ? "text-slate-400 border-slate-500/50 bg-slate-500/10 hover:bg-slate-500/20"
+                    : "text-amber-400 border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20",
+                  toggleStatusMutation.isPending && "opacity-50 cursor-not-allowed"
+                )}
+                title={deck.status === 'locked' ? 'Unlock deck (switch to building)' : 'Lock deck'}
+              >
+                {deck.status === 'locked'
+                  ? <Lock className="w-4 h-4" />
+                  : <Unlock className="w-4 h-4" />
+                }
+              </button>
+            </div>
             {deck.description && (
               <p className="text-parchment-400 text-sm mt-1 line-clamp-2">{deck.description}</p>
             )}
@@ -892,29 +985,70 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       )}
 
-      {/* Deck Statistics - Only in List View */}
-      {deck.cards.length > 0 && viewMode === 'list' && (
-        <>
-          <DeckStats cards={deck.cards} />
-          <DeckAvailability deckId={id} />
-          {isAdmin && <DeckSuggestions deckId={id} />}
-          <SimulationStats deckId={id} cardCount={totalCards} />
-        </>
-      )}
+      {/* Workspace : cartes (gauche) + side-rail analytics (droite, lg+) */}
+      {deck.cards.length > 0 && (() => {
+        const railModules = (
+          <div className="space-y-2">
+            <CollapsibleModule
+              storageKey="deck-rail:tags-stats"
+              title="Tags"
+              icon={<Tag className="w-4 h-4" />}
+              defaultOpen
+              badge={tagStats.length > 0 ? tagStats.length : undefined}
+            >
+              <CardTagStats
+                stats={tagStats}
+                activeTagIds={activeCardTagIds}
+                onToggle={(tagId) =>
+                  setActiveCardTagIds((prev) =>
+                    prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+                  )
+                }
+                onClear={() => setActiveCardTagIds([])}
+                onManage={() => setShowCardTagManager(true)}
+              />
+            </CollapsibleModule>
+            <CollapsibleModule
+              storageKey="deck-rail:deck-stats"
+              title="Stats du deck"
+              icon={<BarChart3 className="w-4 h-4" />}
+              defaultOpen
+            >
+              <DeckStats cards={deck.cards} />
+            </CollapsibleModule>
+            <CollapsibleModule
+              storageKey="deck-rail:availability"
+              title="Dispo collection"
+              icon={<Library className="w-4 h-4" />}
+              lazyMount
+            >
+              <DeckAvailability deckId={id} />
+            </CollapsibleModule>
+            <CollapsibleModule
+              storageKey="deck-rail:simulation"
+              title="Simulation"
+              icon={<FlaskConical className="w-4 h-4" />}
+              lazyMount
+            >
+              <SimulationStats deckId={id} cardCount={totalCards} />
+            </CollapsibleModule>
+          </div>
+        )
 
-      {/* Visual View */}
-      {deck.cards.length > 0 && viewMode === 'visual' && (
-        <DeckVisualView 
-          cards={deck.cards}
-          groupBy={groupBy}
-          onCardClick={setSelectedDeckCard}
-        />
-      )}
-
-      {/* List View - Cards by Category */}
-      {deck.cards.length > 0 && viewMode === 'list' && (
-        <div className="grid gap-6">
-          {CARD_CATEGORIES.map((category) => {
+        return (
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-4 lg:gap-6">
+            {/* Colonne cartes */}
+            <main className="min-w-0 space-y-4">
+              {viewMode === 'visual' && (
+                <DeckVisualView
+                  cards={visibleCards}
+                  groupBy={groupBy}
+                  onCardClick={setSelectedDeckCard}
+                />
+              )}
+              {viewMode === 'list' && (
+                <div className="grid gap-6">
+                  {CARD_CATEGORIES.map((category) => {
             const cards = cardsByCategory[category.code]
             if (!cards || cards.length === 0) return null
 
@@ -961,6 +1095,13 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                           <p className="text-xs text-parchment-400 truncate">
                             {dc.card.typeLine}
                           </p>
+                          {dc.tags && dc.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {dc.tags.map((tag) => (
+                                <CardTagBadge key={tag.id} tag={tag} />
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </button>
 
@@ -1036,6 +1177,14 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                         </a>
                       </div>
 
+                      {/* Tag Picker */}
+                      <CardTagPicker
+                        deckId={id}
+                        deckCardId={dc.id}
+                        assigned={dc.tags ?? []}
+                        available={availableCardTags}
+                      />
+
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-1">
                         <button
@@ -1088,8 +1237,98 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               </div>
             )
           })}
-        </div>
+                </div>
+              )}
+
+              {/* IA — sous le tableau du deck. Pleine largeur de la colonne cartes,
+                  hors side-rail (qui n'est pas adapté à ce composant). */}
+              {isAdmin && (
+                <DeckAIComplete deckId={id} />
+              )}
+            </main>
+
+            {/* Side-rail desktop (lg+). Sticky pour rester visible au scroll. */}
+            <aside className="hidden lg:block lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto pr-1">
+              {railModules}
+            </aside>
+          </div>
+        )
+      })()}
+
+      {/* Bouton flottant mobile pour ouvrir le drawer analyse (<lg). */}
+      {deck.cards.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowMobileRail(true)}
+          className="lg:hidden fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-arcane-700 hover:bg-arcane-600 text-parchment-100 shadow-lg border border-arcane-500/40 text-sm font-medium"
+          title="Ouvrir l'analyse du deck"
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          Analyse
+        </button>
       )}
+
+      {/* Drawer mobile : mêmes modules que le side-rail desktop. */}
+      <Sheet open={showMobileRail} onOpenChange={setShowMobileRail}>
+        <SheetContent side="bottom" className="max-h-[85vh]">
+          <div className="px-4 pt-4 pb-2 border-b border-dungeon-700 flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-gold-400" />
+            <h2 className="font-medieval text-base text-gold-400">Analyse du deck</h2>
+          </div>
+          <div className="overflow-y-auto p-3 space-y-2">
+            <CollapsibleModule
+              storageKey="deck-rail-mobile:tags-stats"
+              title="Tags"
+              icon={<Tag className="w-4 h-4" />}
+              defaultOpen
+              badge={tagStats.length > 0 ? tagStats.length : undefined}
+            >
+              <CardTagStats
+                stats={tagStats}
+                activeTagIds={activeCardTagIds}
+                onToggle={(tagId) =>
+                  setActiveCardTagIds((prev) =>
+                    prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+                  )
+                }
+                onClear={() => setActiveCardTagIds([])}
+                onManage={() => setShowCardTagManager(true)}
+              />
+            </CollapsibleModule>
+            <CollapsibleModule
+              storageKey="deck-rail-mobile:deck-stats"
+              title="Stats du deck"
+              icon={<BarChart3 className="w-4 h-4" />}
+              defaultOpen
+            >
+              <DeckStats cards={deck.cards} />
+            </CollapsibleModule>
+            <CollapsibleModule
+              storageKey="deck-rail-mobile:availability"
+              title="Dispo collection"
+              icon={<Library className="w-4 h-4" />}
+              lazyMount
+            >
+              <DeckAvailability deckId={id} />
+            </CollapsibleModule>
+            <CollapsibleModule
+              storageKey="deck-rail-mobile:simulation"
+              title="Simulation"
+              icon={<FlaskConical className="w-4 h-4" />}
+              lazyMount
+            >
+              <SimulationStats deckId={id} cardCount={totalCards} />
+            </CollapsibleModule>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Card Tag Manager Modal */}
+      <CardTagManager
+        deckId={id}
+        open={showCardTagManager}
+        onOpenChange={setShowCardTagManager}
+      />
 
       {/* Card Detail Modal */}
       <CardDetailModal
@@ -1100,10 +1339,13 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
         currentIndex={selectedDeckCardIndex >= 0 ? selectedDeckCardIndex + 1 : undefined}
         totalCards={orderedDeckCards.length}
         deckCard={selectedDeckCard ? {
+          id: selectedDeckCard.id,
           deckId: id,
           cardId: selectedDeckCard.cardId,
           quantity: selectedDeckCard.quantity,
           category: selectedDeckCard.category,
+          tags: selectedDeckCard.tags ?? [],
+          availableTags: availableCardTags,
         } : undefined}
         onDeckCardUpdate={() => {
           queryClient.invalidateQueries({ queryKey: ['deck', id] })

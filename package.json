@@ -15,9 +15,15 @@
     "sync:prices": "tsx scripts/sync-prices.ts",
     "sync:fresh": "tsx scripts/clear-and-sync.ts",
     "migrate:name-normalized": "tsx scripts/migrate-name-normalized.ts",
-    "seed:owners": "tsx scripts/seed-owners.ts"
+    "seed:owners": "tsx scripts/seed-owners.ts",
+    "ai:smoke": "tsx --env-file=.env scripts/ai/smoke-test.ts",
+    "ai:compare": "tsx --env-file=.env scripts/ai/compare-rerank.ts",
+    "ai:embed": "tsx --env-file=.env scripts/ai/embed-cards.ts",
+    "ai:classify": "tsx --env-file=.env scripts/ai/classify-cards.ts",
+    "ai:analyze-deck": "tsx --env-file=.env scripts/ai/analyze-deck.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.1",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-checkbox": "^1.1.2",
@@ -41,6 +47,7 @@
     "lucide-react": "^0.453.0",
     "next": "^16.1.5",
     "node-cron": "^3.0.3",
+    "openai": "^6.37.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "read-excel-file": "^5.8.6",
@@ -49,12 +56,14 @@
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "tesseract.js": "^7.0.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "zod": "^4.4.3"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.8.0",
     "@types/node-cron": "^3.0.11",
@@ -66,6 +75,7 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.5",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.47",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.14",

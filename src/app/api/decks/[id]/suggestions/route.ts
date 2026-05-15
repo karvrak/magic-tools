@@ -1,64 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getRequestUser, verifyOwnerAccess } from '@/lib/api-auth'
+import { completeDeck } from '@/lib/ai/recommendations/complete-deck'
+import { isSupportedFormat } from '@/lib/ai/types'
 
-const XAI_API_KEY = process.env.XAI_API_KEY
+/**
+ * GET /api/decks/[id]/suggestions
+ *
+ * Endpoint legacy. Reecrit pour utiliser la nouvelle pipeline IA (couche 4):
+ *   filtres deterministes -> embeddings -> classification -> rerank Sonnet 4.6
+ *
+ * Le contrat de reponse est conserve pour ne pas casser le frontend existant:
+ *   { suggestions: [...], analysis: { archetype, synergies, deckColors } }
+ *
+ * Pour les nouveaux clients, preferer:
+ *   - GET /api/decks/[id]/synergies   (rapide, sans LLM)
+ *   - GET /api/decks/[id]/complete    (pipeline complet, reponse groupee par role)
+ */
 
-interface GrokResponse {
-  choices: Array<{
-    message: {
-      content: string
-    }
+interface LegacyResponse {
+  suggestions: Array<{
+    id: string
+    oracleId: string
+    name: string
+    typeLine: string
+    manaCost: string | null
+    colorIdentity: string[]
+    rarity: string
+    setCode: string
+    imageSmall: string | null
+    imageNormal: string | null
+    priceEur: number | null
+    priceUsd: number | null
+    score: number
+    reasons: string[]
   }>
-}
-
-async function askGrok(prompt: string): Promise<string> {
-  const response = await fetch('https://api.x.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${XAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'grok-3-fast',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a Magic: The Gathering expert. You analyze decks and suggest cards that create powerful synergies.
-Respond ONLY with valid JSON, no markdown, no explanation.`
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Grok API error: ${response.status}`)
+  analysis: {
+    archetype: string
+    synergies: string[]
+    deckColors: string[]
   }
-
-  const data = await response.json() as GrokResponse
-  return data.choices[0]?.message?.content || ''
 }
 
-// GET /api/decks/[id]/suggestions
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
-    const { id } = await params
     const { userId, role } = await getRequestUser()
 
-    if (!XAI_API_KEY) {
-      return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
-    }
-
-    // Verify ownership before fetching full deck data
-    const deckForAuth = await prisma.deck.findUnique({ where: { id }, select: { ownerId: true } })
+    const deckForAuth = await prisma.deck.findUnique({
+      where: { id },
+      select: { id: true, ownerId: true, format: true },
+    })
     if (!deckForAuth) {
       return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
     }
@@ -71,141 +66,111 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Get deck with cards
-    const deck = await prisma.deck.findUnique({
+    if (!isSupportedFormat(deckForAuth.format)) {
+      // Comportement legacy: pas d'erreur dure, on renvoie un payload vide.
+      const empty: LegacyResponse = {
+        suggestions: [],
+        analysis: { archetype: '', synergies: [], deckColors: [] },
+      }
+      return NextResponse.json(empty)
+    }
+
+    // Lance la pipeline complete (rerank inclus).
+    const result = await completeDeck({
+      deckId: id,
+      perRoleLimit: 4,
+      maxCandidates: 30,
+      ownedOnly: false,
+    })
+
+    // Aggregate les suggestions de tous les groupes + miscSuggestions
+    const all = [
+      ...result.groups.flatMap((g) => g.suggestions),
+      ...result.miscSuggestions,
+    ]
+
+    // Recuperer les champs manquants (rarity, setCode, colorIdentity, priceUsd)
+    // par requete batch sur cardId — la pipeline ne les charge pas tous.
+    const cardIds = all.map((s) => s.cardId)
+    const cards = cardIds.length
+      ? await prisma.card.findMany({
+          where: { id: { in: cardIds } },
+          select: {
+            id: true,
+            oracleId: true,
+            name: true,
+            typeLine: true,
+            manaCost: true,
+            colorIdentity: true,
+            rarity: true,
+            setCode: true,
+            imageSmall: true,
+            imageNormal: true,
+            priceEur: true,
+            priceUsd: true,
+          },
+        })
+      : []
+    const cardMap = new Map(cards.map((c) => [c.id, c]))
+
+    // Conserver l'ordre du score (rerank deja trie par groupe), dedup par oracleId
+    const seenOracle = new Set<string>()
+    const suggestions: LegacyResponse['suggestions'] = []
+    for (const s of all) {
+      const c = cardMap.get(s.cardId)
+      if (!c) continue
+      if (seenOracle.has(c.oracleId)) continue
+      seenOracle.add(c.oracleId)
+      suggestions.push({
+        id: c.id,
+        oracleId: c.oracleId,
+        name: c.name,
+        typeLine: c.typeLine,
+        manaCost: c.manaCost,
+        colorIdentity: c.colorIdentity,
+        rarity: c.rarity,
+        setCode: c.setCode,
+        imageSmall: c.imageSmall,
+        imageNormal: c.imageNormal,
+        priceEur: c.priceEur,
+        priceUsd: c.priceUsd,
+        score: Math.round((s.score ?? 0) * 100),
+        reasons: [s.explanation],
+      })
+    }
+
+    // Build "synergies" sommaire pour la backward-compat
+    const synergies = result.groups
+      .filter((g) => g.suggestions.length > 0)
+      .map((g) => `${g.role} (${g.current}/${g.target.ideal})`)
+
+    // Deck colors: union color identity du deck (recuperee via la pipeline)
+    const fullDeck = await prisma.deck.findUnique({
       where: { id },
       include: {
-        cards: {
-          include: {
-            card: {
-              select: {
-                name: true,
-                typeLine: true,
-                oracleText: true,
-                colorIdentity: true,
-                manaCost: true,
-              },
-            },
-          },
-        },
+        cards: { include: { card: { select: { colorIdentity: true } } } },
       },
     })
+    const deckColors = [
+      ...new Set((fullDeck?.cards ?? []).flatMap((dc) => dc.card.colorIdentity ?? [])),
+    ]
 
-    if (!deck) {
-      return NextResponse.json({ error: 'Deck not found' }, { status: 404 })
-    }
-
-    if (deck.cards.length < 5) {
-      return NextResponse.json({
-        suggestions: [],
-        analysis: { archetype: '', synergies: [] }
-      })
-    }
-
-    // Build deck summary for Grok
-    const cardList = deck.cards.map(dc => {
-      const c = dc.card
-      return `${dc.quantity}x ${c.name} (${c.typeLine})`
-    }).join('\n')
-
-    // Calculate deck colors
-    const colors = [...new Set(deck.cards.flatMap(dc => dc.card.colorIdentity || []))]
-    const colorStr = colors.length > 0 ? colors.join('') : 'colorless'
-
-    const prompt = `Analyze this Magic: The Gathering deck and suggest 10 cards that would create powerful synergies.
-
-Deck format: ${deck.format || 'casual'}
-Colors: ${colorStr}
-
-Deck cards:
-${cardList}
-
-Respond with this exact JSON:
-{
-  "archetype": "detected archetype name",
-  "synergies": ["synergy 1", "synergy 2"],
-  "suggestions": [
-    {"name": "Exact Card Name IN ENGLISH", "reason": "short reason"}
-  ]
-}
-
-IMPORTANT:
-- Use the EXACT ENGLISH NAMES of Magic cards
-- Suggest QUALITY cards (no bad commons)
-- Cards must be playable in ${colorStr} colors
-- Prioritize cards that create combos or amplify existing synergies`
-
-    const grokResponse = await askGrok(prompt)
-
-    // Parse Grok response
-    let parsed: { archetype: string; synergies: string[]; suggestions: Array<{ name: string; reason: string }> }
-    try {
-      // Clean response (remove markdown if present)
-      const cleaned = grokResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-      parsed = JSON.parse(cleaned)
-    } catch {
-      console.error('Failed to parse Grok response:', grokResponse)
-      return NextResponse.json({ suggestions: [], analysis: { archetype: '', synergies: [] } })
-    }
-
-    // Search for suggested cards in database
-    const suggestedNames = parsed.suggestions.map(s => s.name)
-    const reasonMap = new Map(parsed.suggestions.map(s => [s.name.toLowerCase(), s.reason]))
-
-    const foundCards = await prisma.card.findMany({
-      where: {
-        name: { in: suggestedNames, mode: 'insensitive' },
-        priceEur: { not: null },
-      },
-      select: {
-        id: true,
-        oracleId: true,
-        name: true,
-        typeLine: true,
-        manaCost: true,
-        colorIdentity: true,
-        rarity: true,
-        setCode: true,
-        imageSmall: true,
-        imageNormal: true,
-        priceEur: true,
-        priceUsd: true,
-      },
-      take: 100,
-    })
-
-    // Deduplicate by oracleId and add reasons
-    const seen = new Set<string>()
-    const deckCardNames = new Set(deck.cards.map(dc => dc.card.name.toLowerCase()))
-
-    const suggestions = foundCards
-      .filter(card => {
-        if (seen.has(card.oracleId)) return false
-        if (deckCardNames.has(card.name.toLowerCase())) return false
-        seen.add(card.oracleId)
-        return true
-      })
-      .map(card => ({
-        ...card,
-        score: card.rarity === 'mythic' ? 30 : card.rarity === 'rare' ? 20 : 10,
-        reasons: [reasonMap.get(card.name.toLowerCase()) || 'Synergy with the deck'],
-      }))
-      .slice(0, 12)
-
-    return NextResponse.json({
+    const response: LegacyResponse = {
       suggestions,
       analysis: {
-        archetype: parsed.archetype,
-        synergies: parsed.synergies,
-        deckColors: colors,
+        archetype: result.detectedArchetype ?? '',
+        synergies,
+        deckColors,
       },
-    })
-  } catch (error) {
-    console.error('Error getting suggestions:', error)
+    }
+    return NextResponse.json(response)
+  } catch (err) {
+    console.error('[api/decks/suggestions] error:', err)
+    // Comportement legacy: ne pas casser l'UI sur erreur
     return NextResponse.json({
       suggestions: [],
-      analysis: { archetype: '', synergies: [] },
-      error: 'Failed to get suggestions'
+      analysis: { archetype: '', synergies: [], deckColors: [] },
+      error: 'Failed to get suggestions',
     })
   }
 }

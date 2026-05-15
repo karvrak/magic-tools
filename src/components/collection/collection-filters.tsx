@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Input } from '@/components/ui/input'
+import type { CardTagWithUsage } from '@/components/deck/card-tags-types'
 import {
   Select,
   SelectContent,
@@ -26,7 +28,8 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   Sparkles,
-  Loader2
+  Loader2,
+  Tag as TagIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
@@ -44,6 +47,7 @@ export interface CollectionFilters {
   isFoil: 'all' | 'true' | 'false'
   sortBy: 'date' | 'name' | 'price' | 'cmc' | 'rarity' | 'set'
   sortDir: 'asc' | 'desc'
+  cardTagIds: string[]
 }
 
 export const DEFAULT_COLLECTION_FILTERS: CollectionFilters = {
@@ -59,6 +63,7 @@ export const DEFAULT_COLLECTION_FILTERS: CollectionFilters = {
   isFoil: 'all',
   sortBy: 'date',
   sortDir: 'desc',
+  cardTagIds: [],
 }
 
 interface CollectionFiltersPanelProps {
@@ -387,6 +392,24 @@ export function CollectionFiltersPanel({
     onChange({ ...filters, rarity: newRarity })
   }
 
+  const { data: cardTagsData } = useQuery<{ tags: CardTagWithUsage[] }>({
+    queryKey: ['card-tags', 'global'],
+    queryFn: async () => {
+      const res = await fetch('/api/card-tags')
+      if (!res.ok) throw new Error('Failed to load card tags')
+      return res.json()
+    },
+    staleTime: 60_000,
+  })
+  const globalTags = (cardTagsData?.tags ?? []).filter((t) => t.scope === 'global')
+
+  const toggleCardTag = (tagId: string) => {
+    const next = filters.cardTagIds.includes(tagId)
+      ? filters.cardTagIds.filter((id) => id !== tagId)
+      : [...filters.cardTagIds, tagId]
+    onChange({ ...filters, cardTagIds: next })
+  }
+
   const activeFilterCount = [
     filters.name,
     filters.colors.length > 0,
@@ -397,6 +420,7 @@ export function CollectionFiltersPanel({
     filters.cmcMax !== null,
     filters.condition,
     filters.isFoil !== 'all',
+    filters.cardTagIds.length > 0,
   ].filter(Boolean).length
 
   return (
@@ -652,6 +676,40 @@ export function CollectionFiltersPanel({
               ))}
             </div>
           </div>
+
+          {/* User card tags filter */}
+          {globalTags.length > 0 && (
+            <div>
+              <span className="text-xs text-parchment-400 font-medieval mb-1.5 flex items-center gap-1.5">
+                <TagIcon className="w-3.5 h-3.5" />
+                Mes tags
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {globalTags.map((tag) => {
+                  const isActive = filters.cardTagIds.includes(tag.id)
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleCardTag(tag.id)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-xs font-medium border-2 transition-all',
+                        isActive ? 'shadow-md' : 'opacity-80 hover:opacity-100'
+                      )}
+                      style={{
+                        borderColor: tag.color,
+                        color: isActive ? '#fff' : tag.color,
+                        backgroundColor: isActive ? tag.color : 'transparent',
+                      }}
+                      title={isActive ? `Retirer le filtre ${tag.name}` : `Filtrer par ${tag.name}`}
+                    >
+                      {tag.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
     </div>
