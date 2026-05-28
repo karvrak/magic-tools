@@ -62,8 +62,21 @@ interface CompleteResult {
   deckEvaluation: DeckEvaluationItem[]
 }
 
+export interface AIPreviewCard {
+  cardId: string
+  name: string
+  imageNormal: string | null
+}
+
 interface DeckAIProps {
   deckId: string
+  /**
+   * Appele a chaque clic sur l'image d'une carte (suggestion ou evaluation
+   * du deck). Recoit la liste plate ordonnee de toutes les cartes visibles
+   * dans la section AI et l'index de la carte cliquee — pour permettre au
+   * parent d'afficher un preview avec navigation prev/next.
+   */
+  onCardSelect?: (cards: AIPreviewCard[], index: number) => void
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -114,7 +127,7 @@ function buildQueryParams(filters: AppliedFilters, force: boolean): string {
   return params.toString()
 }
 
-export function DeckAIComplete({ deckId }: DeckAIProps) {
+export function DeckAIComplete({ deckId, onCardSelect }: DeckAIProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [shouldFetch, setShouldFetch] = useState(false)
   // Etat formulaire (live) vs appliques (declenchent le fetch).
@@ -202,21 +215,37 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
     },
   })
 
-  const categoryFor = (typeLine: string) => {
-    const t = typeLine.toLowerCase()
-    if (t.includes('creature')) return 'creature'
-    if (t.includes('instant')) return 'instant'
-    if (t.includes('sorcery')) return 'sorcery'
-    if (t.includes('artifact')) return 'artifact'
-    if (t.includes('enchantment')) return 'enchantment'
-    if (t.includes('planeswalker')) return 'planeswalker'
-    if (t.includes('land')) return 'land'
-    return 'mainboard'
-  }
+  // Les seules categories valides cote DB sont mainboard/sideboard/maybeboard/
+  // commander. L'AI complete pour _completer_ le deck => mainboard par defaut.
+  const categoryFor = (_typeLine: string) => 'mainboard'
 
   const allCount =
     (data?.miscSuggestions.length ?? 0) +
     (data?.groups.reduce((acc, g) => acc + g.suggestions.length, 0) ?? 0)
+
+  // Liste plate ordonnee de toutes les cartes "visualisables" — dans l'ordre
+  // d'apparition a l'ecran : eval du deck, puis groupes par role, puis misc.
+  // Sert au preview en side-rail: une seule sequence pour les fleches prev/next.
+  const allPreviewCards = useMemo<AIPreviewCard[]>(() => {
+    if (!data) return []
+    const out: AIPreviewCard[] = []
+    const seen = new Set<string>()
+    const push = (c: { cardId: string; name: string; imageNormal: string | null }) => {
+      if (seen.has(c.cardId)) return
+      seen.add(c.cardId)
+      out.push({ cardId: c.cardId, name: c.name, imageNormal: c.imageNormal })
+    }
+    for (const c of data.deckEvaluation) push(c)
+    for (const g of data.groups) for (const s of g.suggestions) push(s)
+    for (const s of data.miscSuggestions) push(s)
+    return out
+  }, [data])
+
+  const handleCardClick = (cardId: string) => {
+    if (!onCardSelect) return
+    const idx = allPreviewCards.findIndex((c) => c.cardId === cardId)
+    if (idx >= 0) onCardSelect(allPreviewCards, idx)
+  }
 
   const formatComputedAt = (iso?: string) => {
     if (!iso) return null
@@ -383,7 +412,10 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
 
                   {/* Best / worst cards du deck (note IA par carte) */}
                   {data.deckEvaluation && data.deckEvaluation.length > 0 && (
-                    <DeckEvaluationSection items={data.deckEvaluation} />
+                    <DeckEvaluationSection
+                      items={data.deckEvaluation}
+                      onCardClick={handleCardClick}
+                    />
                   )}
 
                   {/* Role groups */}
@@ -399,6 +431,7 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
                           category: categoryFor(c.typeLine),
                         })
                       }
+                      onCardClick={handleCardClick}
                       isPending={addCardMutation.isPending}
                     />
                   ))}
@@ -415,6 +448,7 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
                           category: categoryFor(c.typeLine),
                         })
                       }
+                      onCardClick={handleCardClick}
                       isPending={addCardMutation.isPending}
                     />
                   )}
@@ -549,7 +583,13 @@ function FilterPanel({
 
 type EvaluationFilter = 'best' | 'worst' | 'all'
 
-function DeckEvaluationSection({ items }: { items: DeckEvaluationItem[] }) {
+function DeckEvaluationSection({
+  items,
+  onCardClick,
+}: {
+  items: DeckEvaluationItem[]
+  onCardClick?: (cardId: string) => void
+}) {
   const [filter, setFilter] = useState<EvaluationFilter>('best')
   const sorted = [...items].sort((a, b) => b.score - a.score)
   const visible =
@@ -602,7 +642,11 @@ function DeckEvaluationSection({ items }: { items: DeckEvaluationItem[] }) {
       </header>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {visible.map((c) => (
-          <DeckEvaluationCard key={c.cardId} card={c} />
+          <DeckEvaluationCard
+            key={c.cardId}
+            card={c}
+            onClick={onCardClick ? () => onCardClick(c.cardId) : undefined}
+          />
         ))}
       </div>
     </section>
@@ -634,7 +678,13 @@ function FilterPill({
   )
 }
 
-function DeckEvaluationCard({ card }: { card: DeckEvaluationItem }) {
+function DeckEvaluationCard({
+  card,
+  onClick,
+}: {
+  card: DeckEvaluationItem
+  onClick?: () => void
+}) {
   const scorePct = Math.round(card.score * 100)
   const scoreColor =
     card.score >= 0.7
@@ -646,7 +696,25 @@ function DeckEvaluationCard({ card }: { card: DeckEvaluationItem }) {
           : 'text-dragon-400 bg-dragon-900/60'
   return (
     <div className="relative">
-      <div className="relative aspect-[5/7] rounded-lg overflow-hidden border-2 border-dungeon-600">
+      <div
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={
+          onClick
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onClick()
+                }
+              }
+            : undefined
+        }
+        className={cn(
+          'relative aspect-[5/7] rounded-lg overflow-hidden border-2 border-dungeon-600',
+          onClick && 'cursor-pointer hover:border-arcane-400/60 transition-colors'
+        )}
+      >
         {card.imageNormal ? (
           <Image
             src={card.imageNormal}
@@ -703,12 +771,14 @@ function SuggestionGroup({
   subtitle,
   suggestions,
   onAdd,
+  onCardClick,
   isPending,
 }: {
   title: string
   subtitle?: string
   suggestions: SuggestionItem[]
   onAdd: (s: SuggestionItem) => void
+  onCardClick?: (cardId: string) => void
   isPending: boolean
 }) {
   if (suggestions.length === 0) return null
@@ -726,6 +796,7 @@ function SuggestionGroup({
             key={c.cardId}
             card={c}
             onAdd={() => onAdd(c)}
+            onClick={onCardClick ? () => onCardClick(c.cardId) : undefined}
             isPending={isPending}
           />
         ))}
@@ -737,10 +808,12 @@ function SuggestionGroup({
 function SuggestionCard({
   card,
   onAdd,
+  onClick,
   isPending,
 }: {
   card: SuggestionItem
   onAdd: () => void
+  onClick?: () => void
   isPending: boolean
 }) {
   const scorePct = Math.round(card.score * 100)
@@ -752,7 +825,25 @@ function SuggestionCard({
         : 'text-parchment-500'
   return (
     <div className="relative group">
-      <div className="relative aspect-[5/7] rounded-lg overflow-hidden border-2 border-dungeon-600 hover:border-arcane-400/60 transition-colors">
+      <div
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={
+          onClick
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onClick()
+                }
+              }
+            : undefined
+        }
+        className={cn(
+          'relative aspect-[5/7] rounded-lg overflow-hidden border-2 border-dungeon-600 hover:border-arcane-400/60 transition-colors',
+          onClick && 'cursor-pointer'
+        )}
+      >
         {card.imageNormal ? (
           <Image
             src={card.imageNormal}
@@ -779,7 +870,10 @@ function SuggestionCard({
             {scorePct}
           </span>
           <button
-            onClick={onAdd}
+            onClick={(e) => {
+              e.stopPropagation()
+              onAdd()
+            }}
             disabled={isPending}
             className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
             title="Ajouter au deck"

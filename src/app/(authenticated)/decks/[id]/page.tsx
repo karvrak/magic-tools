@@ -65,7 +65,8 @@ import { DeckStats } from '@/components/deck/deck-stats'
 import { DeckVisualView } from '@/components/deck/deck-visual-view'
 import { SimulationStats } from '@/components/deck/simulation-stats'
 import { DeckAvailability } from '@/components/deck/deck-availability'
-import { DeckAIComplete } from '@/components/deck/deck-ai-complete'
+import { DeckAIComplete, type AIPreviewCard } from '@/components/deck/deck-ai-complete'
+import { DeckAICardPreview } from '@/components/deck/deck-ai-card-preview'
 import { CardTagManager } from '@/components/deck/card-tag-manager'
 import { CardTagPicker, CardTagBadge } from '@/components/deck/card-tag-picker'
 import { CardTagStats } from '@/components/deck/card-tag-stats'
@@ -152,6 +153,28 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
   const [showCardTagManager, setShowCardTagManager] = useState(false)
   // Drawer mobile pour le side-rail (visible sur <lg).
   const [showMobileRail, setShowMobileRail] = useState(false)
+
+  // Carte AI selectionnee pour le preview en side-rail. La liste est un
+  // snapshot fournie par DeckAIComplete au moment du clic — c'est volontaire
+  // pour eviter les desyncs si l'analyse est re-run pendant qu'on navigue.
+  const [aiPreview, setAiPreview] = useState<{
+    cards: AIPreviewCard[]
+    index: number
+  } | null>(null)
+  const handleAIPreview = useCallback(
+    (cards: AIPreviewCard[], index: number) => setAiPreview({ cards, index }),
+    []
+  )
+  const handleAIPreviewPrev = useCallback(() => {
+    setAiPreview((p) =>
+      p && p.index > 0 ? { ...p, index: p.index - 1 } : p
+    )
+  }, [])
+  const handleAIPreviewNext = useCallback(() => {
+    setAiPreview((p) =>
+      p && p.index < p.cards.length - 1 ? { ...p, index: p.index + 1 } : p
+    )
+  }, [])
 
   // Fetch owners for the edit modal
   const { data: ownersData } = useQuery<{ owners: Owner[] }>({
@@ -544,16 +567,24 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
     duplicateDeckMutation.mutate(duplicateName.trim())
   }
 
-  // Flat ordered list of deck cards for modal navigation (same order as list view)
+  // Flat ordered list of deck cards for modal navigation (same order as list view).
+  // Respecte le filtre tags actif: les fleches du modal naviguent uniquement
+  // dans la selection visible, pas dans tout le deck.
   const orderedDeckCards = useMemo(() => {
     const cards = data?.deck?.cards
     if (!cards) return []
+    const filtered =
+      activeCardTagIds.length === 0
+        ? cards
+        : cards.filter(
+            (c) => c.tags?.some((t) => activeCardTagIds.includes(t.id)) ?? false
+          )
     const result: DeckCard[] = []
     for (const cat of CARD_CATEGORIES) {
-      result.push(...cards.filter(c => c.category === cat.code))
+      result.push(...filtered.filter((c) => c.category === cat.code))
     }
     return result
-  }, [data?.deck?.cards])
+  }, [data?.deck?.cards, activeCardTagIds])
 
   const selectedDeckCardIndex = useMemo(() => {
     if (!selectedDeckCard) return -1
@@ -1032,6 +1063,29 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             >
               <SimulationStats deckId={id} cardCount={totalCards} />
             </CollapsibleModule>
+            {isAdmin && (
+              <CollapsibleModule
+                storageKey="deck-rail:ai-preview"
+                title="Aperçu carte IA"
+                icon={<Sparkles className="w-4 h-4" />}
+                defaultOpen
+                badge={aiPreview ? `${aiPreview.index + 1}/${aiPreview.cards.length}` : undefined}
+              >
+                <DeckAICardPreview
+                  card={aiPreview ? aiPreview.cards[aiPreview.index] ?? null : null}
+                  index={aiPreview?.index ?? 0}
+                  total={aiPreview?.cards.length ?? 0}
+                  onPrev={
+                    aiPreview && aiPreview.index > 0 ? handleAIPreviewPrev : undefined
+                  }
+                  onNext={
+                    aiPreview && aiPreview.index < aiPreview.cards.length - 1
+                      ? handleAIPreviewNext
+                      : undefined
+                  }
+                />
+              </CollapsibleModule>
+            )}
           </div>
         )
 
@@ -1243,7 +1297,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               {/* IA — sous le tableau du deck. Pleine largeur de la colonne cartes,
                   hors side-rail (qui n'est pas adapté à ce composant). */}
               {isAdmin && (
-                <DeckAIComplete deckId={id} />
+                <DeckAIComplete deckId={id} onCardSelect={handleAIPreview} />
               )}
             </main>
 
@@ -1319,6 +1373,29 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             >
               <SimulationStats deckId={id} cardCount={totalCards} />
             </CollapsibleModule>
+            {isAdmin && (
+              <CollapsibleModule
+                storageKey="deck-rail-mobile:ai-preview"
+                title="Aperçu carte IA"
+                icon={<Sparkles className="w-4 h-4" />}
+                defaultOpen
+                badge={aiPreview ? `${aiPreview.index + 1}/${aiPreview.cards.length}` : undefined}
+              >
+                <DeckAICardPreview
+                  card={aiPreview ? aiPreview.cards[aiPreview.index] ?? null : null}
+                  index={aiPreview?.index ?? 0}
+                  total={aiPreview?.cards.length ?? 0}
+                  onPrev={
+                    aiPreview && aiPreview.index > 0 ? handleAIPreviewPrev : undefined
+                  }
+                  onNext={
+                    aiPreview && aiPreview.index < aiPreview.cards.length - 1
+                      ? handleAIPreviewNext
+                      : undefined
+                  }
+                />
+              </CollapsibleModule>
+            )}
           </div>
         </SheetContent>
       </Sheet>
