@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { CardWithPrice } from '@/types/scryfall'
+import { LegalityBadge } from './legality-badge'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🎴 TYPES
@@ -21,6 +22,7 @@ interface DeckCard {
 interface DeckVisualViewProps {
   cards: DeckCard[]
   groupBy: 'cmc' | 'type'
+  deckFormat?: string | null
   onCardClick?: (deckCard: DeckCard) => void
 }
 
@@ -148,11 +150,12 @@ function groupCardsByType(cards: DeckCard[]): Map<string, DeckCard[]> {
 
 interface CardStackProps {
   cards: DeckCard[]
+  deckFormat?: string | null
   onCardHover: (card: CardWithPrice | null, rect: DOMRect | null) => void
   onCardClick?: (deckCard: DeckCard) => void
 }
 
-function CardStack({ cards, onCardHover, onCardClick }: CardStackProps) {
+function CardStack({ cards, deckFormat, onCardHover, onCardClick }: CardStackProps) {
   // Sort cards by name within the stack - one entry per unique card
   const sortedCards = [...cards].sort((a, b) => a.card.name.localeCompare(b.card.name))
   
@@ -216,6 +219,14 @@ function CardStack({ cards, onCardHover, onCardClick }: CardStackProps) {
                 x{dc.quantity}
               </div>
             )}
+
+            {/* Legality warning - only when card is not legal in the deck's format */}
+            <LegalityBadge
+              legalities={dc.card.legalities}
+              format={deckFormat}
+              size="sm"
+              className="absolute top-0.5 left-0.5 sm:top-1 sm:left-1 shadow-md"
+            />
           </div>
         </motion.div>
       ))}
@@ -356,7 +367,7 @@ function DeckSummary({ cards }: DeckSummaryProps) {
 // 🎴 MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function DeckVisualView({ cards, groupBy, onCardClick }: DeckVisualViewProps) {
+export function DeckVisualView({ cards, groupBy, deckFormat, onCardClick }: DeckVisualViewProps) {
   const [hoveredCard, setHoveredCard] = useState<CardWithPrice | null>(null)
   const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number } | null>(null)
   
@@ -416,8 +427,9 @@ export function DeckVisualView({ cards, groupBy, onCardClick }: DeckVisualViewPr
                 </div>
                 
                 {/* Card Stack */}
-                <CardStack 
+                <CardStack
                   cards={groupCards}
+                  deckFormat={deckFormat}
                   onCardHover={handleCardHover}
                   onCardClick={onCardClick}
                 />

@@ -69,6 +69,7 @@ import { DeckAIComplete, type AIPreviewCard } from '@/components/deck/deck-ai-co
 import { DeckAICardPreview } from '@/components/deck/deck-ai-card-preview'
 import { CardTagManager } from '@/components/deck/card-tag-manager'
 import { CardTagPicker, CardTagBadge } from '@/components/deck/card-tag-picker'
+import { LegalityBadge } from '@/components/deck/legality-badge'
 import { CardTagStats } from '@/components/deck/card-tag-stats'
 import type { CardTag as CardTagType, CardTagStat } from '@/components/deck/card-tags-types'
 import { CardDetailModal } from '@/components/card/card-detail-modal'
@@ -1097,6 +1098,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                 <DeckVisualView
                   cards={visibleCards}
                   groupBy={groupBy}
+                  deckFormat={deck.format}
                   onCardClick={setSelectedDeckCard}
                 />
               )}
@@ -1145,7 +1147,14 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
 
                         {/* Card Info */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-parchment-200 truncate">{dc.card.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-parchment-200 truncate">{dc.card.name}</p>
+                            <LegalityBadge
+                              legalities={dc.card.legalities}
+                              format={deck.format}
+                              size="sm"
+                            />
+                          </div>
                           <p className="text-xs text-parchment-400 truncate">
                             {dc.card.typeLine}
                           </p>

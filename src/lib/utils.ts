@@ -95,6 +95,20 @@ export function getRarityColor(rarity: string): string {
   }
 }
 
+export type LegalityStatus = 'legal' | 'not_legal' | 'banned' | 'restricted'
+
+export function getCardLegalityStatus(
+  legalities: Record<string, string> | null | undefined,
+  format: string | null | undefined
+): LegalityStatus | null {
+  if (!format || !legalities) return null
+  const value = legalities[format]
+  if (value === 'legal' || value === 'not_legal' || value === 'banned' || value === 'restricted') {
+    return value
+  }
+  return null
+}
+
 export function getManaSymbolUrl(symbol: string): string {
   // Scryfall mana symbol URL
   const cleanSymbol = symbol.replace(/[{}]/g, '').toUpperCase()
