@@ -21,6 +21,16 @@ export interface DeterministicFilterContext {
   ownedOnly: boolean
   /** Owner ID du deck (si ownedOnly). */
   ownerId: string | null
+  /**
+   * Filtre rarete: si non vide, la carte doit appartenir a une de ces raretes
+   * (common, uncommon, rare, mythic). Choix utilisateur depuis l'UI.
+   */
+  rarities?: readonly string[]
+  /**
+   * Prix max en EUR (TCG/Scryfall). Si defini, exclut les cartes sans prix
+   * connu OU dont priceEur > priceMaxEur. Utile pour les budget builds.
+   */
+  priceMaxEur?: number | null
 }
 
 /**
@@ -89,6 +99,20 @@ export function buildDeterministicWhere(
         WHERE ci."ownerId" = ${ctx.ownerId}
           AND c2."oracleId" = c."oracleId"
       )`
+    )
+  }
+
+  // 7. Rarete: liste blanche optionnelle (common/uncommon/rare/mythic).
+  if (ctx.rarities && ctx.rarities.length > 0) {
+    const rarities = ctx.rarities as readonly string[]
+    conditions.push(Prisma.sql`c."rarity" IN (${Prisma.join(rarities)})`)
+  }
+
+  // 8. Prix max EUR: une carte sans priceEur est exclue (on ne peut pas garantir
+  //    qu'elle respecte le budget). Pour les budget builds, c'est l'effet voulu.
+  if (typeof ctx.priceMaxEur === 'number' && ctx.priceMaxEur >= 0) {
+    conditions.push(
+      Prisma.sql`c."priceEur" IS NOT NULL AND c."priceEur" <= ${ctx.priceMaxEur}`
     )
   }
 

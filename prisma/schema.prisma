@@ -244,6 +244,9 @@ model Deck {
   // Pipeline IA "complete" persiste (cf. /api/decks/[id]/complete?force=true)
   aiCompletion   Json? // CompleteDeckResult complet (suggestions + deckEvaluation)
   aiCompletedAt  DateTime? @db.Timestamptz()
+  // Variantes custom (avec userPrompt et/ou filtres rarities/priceMaxEur),
+  // indexees par hash deterministe { [hash]: { result, computedAt, inputs } }.
+  aiCompletionVariants Json @default("{}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

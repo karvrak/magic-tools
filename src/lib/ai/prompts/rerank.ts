@@ -91,6 +91,21 @@ export interface RerankInput {
     archetypeTags: string[]
     similarityScore: number
   }>
+  /**
+   * Instruction libre de l'utilisateur ("trouve des kill", "equilibre la mana
+   * base", "plus de ramp", "que des cartes flashy"…). Si fournie, elle prend
+   * priorite sur le scoring "engine fit" par defaut.
+   */
+  userPrompt?: string | null
+  /**
+   * Filtres deterministes appliques en SQL (rarete, prix max). Listes ici pour
+   * que le LLM en ait conscience et ne dise pas "ajoute Wheel of Fortune" si
+   * l'utilisateur a verrouille rarete=common.
+   */
+  hardFilters?: {
+    rarities?: readonly string[]
+    priceMaxEur?: number | null
+  }
 }
 
 const truncate = (s: string | null, max: number): string => {
@@ -144,10 +159,35 @@ export function buildRerankUserPrompt(input: RerankInput): string {
   const candIdList = input.candidates.map((c) => c.id).join(', ')
   const deckIdList = input.deckCards.map((c) => c.id).join(', ')
 
+  // Section USER INTENT: si l'utilisateur a tape un prompt libre, on l'injecte
+  // en haut avec une consigne forte. Le LLM doit le respecter en priorite tout
+  // en restant honnete sur les cartes qui n'y collent pas (score < 0.4 si elles
+  // ne servent pas l'intention).
+  const userIntent = input.userPrompt?.trim()
+  const userIntentSection = userIntent
+    ? `\n============================================================\nUSER INTENT — PRIORITY OVERRIDE\n============================================================\nThe user typed this instruction in plain language. Use it as the PRIMARY ranking signal, ABOVE the default "engine fit" heuristic. If a candidate does not serve this intent, score it 0.0–0.4 even if it is otherwise strong. If the intent is contradictory with the deck (e.g. "more ramp" in a deck already full of ramp), satisfy the intent anyway — the user knows what they want. Make the explanations refer to the intent explicitly.\n\n"""\n${userIntent}\n"""\n`
+    : ''
+
+  const hardFiltersBits: string[] = []
+  if (input.hardFilters?.rarities && input.hardFilters.rarities.length > 0) {
+    hardFiltersBits.push(
+      `rarity restricted to: ${input.hardFilters.rarities.join(', ')}`
+    )
+  }
+  if (
+    typeof input.hardFilters?.priceMaxEur === 'number' &&
+    input.hardFilters.priceMaxEur >= 0
+  ) {
+    hardFiltersBits.push(`max price: ${input.hardFilters.priceMaxEur}€`)
+  }
+  const hardFiltersSection = hardFiltersBits.length
+    ? `\nHARD FILTERS (already enforced in SQL — every candidate already respects them; do NOT recommend cards outside these limits in your explanations):\n  - ${hardFiltersBits.join('\n  - ')}\n`
+    : ''
+
   return `Deck: ${input.deckName}
 Format: ${input.format}
 Detected archetype (heuristic): ${input.detectedArchetype ?? 'unknown'}
-
+${userIntentSection}${hardFiltersSection}
 ${cmdrSection}
 
 ${mechSection}

@@ -46,6 +46,19 @@ export interface CompleteDeckArgs {
   ownedOnly?: boolean
   /** Override du modele de rerank (slug OpenRouter). Default: RERANK_MODEL */
   rerankModel?: string
+  /**
+   * Instruction utilisateur en langage naturel ("trouve des kill", "equilibre
+   * la mana base", "plus de ramp"…). Injectee dans le prompt rerank comme
+   * signal prioritaire au-dessus du scoring "engine fit" par defaut.
+   */
+  userPrompt?: string | null
+  /**
+   * Liste blanche de raretes (common/uncommon/rare/mythic). Si fournie, filtre
+   * applique en SQL avant le vector search.
+   */
+  rarities?: readonly string[] | null
+  /** Prix max EUR (TCG/Scryfall) — filtre en SQL. */
+  priceMaxEur?: number | null
 }
 
 export interface CompleteDeckResult {
@@ -455,6 +468,11 @@ async function rerankWithLLM(args: {
   roleGaps: RoleGap[]
   candidates: SynergyCandidate[]
   model?: string
+  userPrompt?: string | null
+  hardFilters?: {
+    rarities?: readonly string[]
+    priceMaxEur?: number | null
+  }
 }): Promise<RerankResponse> {
   const userPrompt = buildRerankUserPrompt({
     deckName: args.meta.name,
@@ -486,6 +504,8 @@ async function rerankWithLLM(args: {
       archetypeTags: c.archetypeTags,
       similarityScore: c.similarityHybrid,
     })),
+    userPrompt: args.userPrompt ?? null,
+    hardFilters: args.hardFilters,
   })
 
   const expectedDeckIds = new Set(args.deckCards.map((c) => c.id))
@@ -726,6 +746,11 @@ export async function completeDeck(
     excludedOracleIds: meta.excludedOracleIds,
     ownedOnly: !!args.ownedOnly,
     ownerId: meta.ownerId,
+    rarities: args.rarities && args.rarities.length > 0 ? args.rarities : undefined,
+    priceMaxEur:
+      typeof args.priceMaxEur === 'number' && args.priceMaxEur >= 0
+        ? args.priceMaxEur
+        : undefined,
   }
   const deckVectors = extractDeckVectors(analysis.cards)
 
@@ -982,6 +1007,11 @@ export async function completeDeck(
       roleGaps: realGaps,
       candidates: allCandidates,
       model: args.rerankModel,
+      userPrompt: args.userPrompt ?? null,
+      hardFilters: {
+        rarities: filterCtx.rarities,
+        priceMaxEur: filterCtx.priceMaxEur ?? null,
+      },
     })
   } catch (err) {
     console.error('[ai/rerank] failed, falling back to similarity ordering:', err)

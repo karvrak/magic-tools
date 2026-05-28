@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -79,17 +79,74 @@ const ROLE_LABEL: Record<string, string> = {
   wipe: 'Board wipes',
 }
 
+const RARITY_OPTIONS = [
+  { value: 'common', label: 'Common' },
+  { value: 'uncommon', label: 'Uncommon' },
+  { value: 'rare', label: 'Rare' },
+  { value: 'mythic', label: 'Mythic' },
+] as const
+
+interface AppliedFilters {
+  userPrompt: string
+  rarities: string[]
+  priceMax: string // garde la string pour controller l'input, parse a l'envoi
+}
+
+const EMPTY_FILTERS: AppliedFilters = {
+  userPrompt: '',
+  rarities: [],
+  priceMax: '',
+}
+
+/** Construit les query params a partir des filtres. */
+function buildQueryParams(filters: AppliedFilters, force: boolean): string {
+  const params = new URLSearchParams({
+    max_candidates: '100',
+    per_role_limit: '20',
+  })
+  if (force) params.set('force', 'true')
+  if (filters.userPrompt.trim()) params.set('user_prompt', filters.userPrompt.trim())
+  if (filters.rarities.length > 0) params.set('rarities', filters.rarities.join(','))
+  const priceMaxNum = Number(filters.priceMax)
+  if (filters.priceMax.trim() && Number.isFinite(priceMaxNum) && priceMaxNum >= 0) {
+    params.set('price_max', String(priceMaxNum))
+  }
+  return params.toString()
+}
+
 export function DeckAIComplete({ deckId }: DeckAIProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [shouldFetch, setShouldFetch] = useState(false)
+  // Etat formulaire (live) vs appliques (declenchent le fetch).
+  const [draftFilters, setDraftFilters] = useState<AppliedFilters>(EMPTY_FILTERS)
+  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>(EMPTY_FILTERS)
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
+  const hasCustomFilters = useMemo(
+    () =>
+      appliedFilters.userPrompt.trim().length > 0 ||
+      appliedFilters.rarities.length > 0 ||
+      appliedFilters.priceMax.trim().length > 0,
+    [appliedFilters]
+  )
+
+  const queryKey = useMemo(
+    () => [
+      'deck-ai-complete',
+      deckId,
+      appliedFilters.userPrompt.trim(),
+      [...appliedFilters.rarities].sort().join(','),
+      appliedFilters.priceMax.trim(),
+    ],
+    [deckId, appliedFilters]
+  )
+
   const { data, isLoading, error } = useQuery<CompleteResult>({
-    queryKey: ['deck-ai-complete', deckId],
+    queryKey,
     queryFn: async () => {
       const r = await fetch(
-        `/api/decks/${deckId}/complete?max_candidates=100&per_role_limit=20`
+        `/api/decks/${deckId}/complete?${buildQueryParams(appliedFilters, false)}`
       )
       if (!r.ok) {
         const body = await r.json().catch(() => ({}))
@@ -105,7 +162,7 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
   const rerunMutation = useMutation<CompleteResult>({
     mutationFn: async () => {
       const r = await fetch(
-        `/api/decks/${deckId}/complete?max_candidates=100&per_role_limit=20&force=true`
+        `/api/decks/${deckId}/complete?${buildQueryParams(appliedFilters, true)}`
       )
       if (!r.ok) {
         const body = await r.json().catch(() => ({}))
@@ -114,7 +171,7 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
       return r.json()
     },
     onSuccess: (fresh) => {
-      queryClient.setQueryData<CompleteResult>(['deck-ai-complete', deckId], fresh)
+      queryClient.setQueryData<CompleteResult>(queryKey, fresh)
       toast({ title: 'Analyse IA mise à jour' })
     },
     onError: (err) => {
@@ -175,6 +232,25 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
   }
   const computedLabel = formatComputedAt(data?.computedAt)
 
+  const applyDraft = () => {
+    setAppliedFilters(draftFilters)
+    setShouldFetch(true)
+  }
+
+  const resetFilters = () => {
+    setDraftFilters(EMPTY_FILTERS)
+    setAppliedFilters(EMPTY_FILTERS)
+  }
+
+  const toggleRarity = (rarity: string) => {
+    setDraftFilters((prev) => ({
+      ...prev,
+      rarities: prev.rarities.includes(rarity)
+        ? prev.rarities.filter((r) => r !== rarity)
+        : [...prev.rarities, rarity],
+    }))
+  }
+
   return (
     <div className="card-frame overflow-hidden">
       <button
@@ -194,6 +270,11 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
           <span className="text-xs text-parchment-500">
             (Sonnet 4.6 · jusqu’à 100 cartes)
           </span>
+          {hasCustomFilters && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold-500/20 text-gold-300 border border-gold-400/30">
+              règles custom
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {isExpanded && data && (
@@ -234,6 +315,21 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 border-t border-dungeon-700">
+              <FilterPanel
+                draft={draftFilters}
+                applied={appliedFilters}
+                onPromptChange={(v) =>
+                  setDraftFilters((p) => ({ ...p, userPrompt: v }))
+                }
+                onToggleRarity={toggleRarity}
+                onPriceMaxChange={(v) =>
+                  setDraftFilters((p) => ({ ...p, priceMax: v }))
+                }
+                onApply={applyDraft}
+                onReset={resetFilters}
+                isPending={isLoading || rerunMutation.isPending}
+              />
+
               {isLoading && (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-arcane-300" />
@@ -329,6 +425,125 @@ export function DeckAIComplete({ deckId }: DeckAIProps) {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+function FilterPanel({
+  draft,
+  applied,
+  onPromptChange,
+  onToggleRarity,
+  onPriceMaxChange,
+  onApply,
+  onReset,
+  isPending,
+}: {
+  draft: AppliedFilters
+  applied: AppliedFilters
+  onPromptChange: (v: string) => void
+  onToggleRarity: (r: string) => void
+  onPriceMaxChange: (v: string) => void
+  onApply: () => void
+  onReset: () => void
+  isPending: boolean
+}) {
+  const dirty =
+    draft.userPrompt !== applied.userPrompt ||
+    draft.priceMax !== applied.priceMax ||
+    draft.rarities.length !== applied.rarities.length ||
+    draft.rarities.some((r) => !applied.rarities.includes(r))
+
+  const hasAnyFilter =
+    draft.userPrompt.trim().length > 0 ||
+    draft.rarities.length > 0 ||
+    draft.priceMax.trim().length > 0
+
+  return (
+    <section className="pt-4 pb-3 space-y-3">
+      <div>
+        <label className="block text-xs text-parchment-300 mb-1">
+          Intention (optionnel)
+          <span className="text-parchment-500 ml-1">
+            — ex&nbsp;: « trouve des kill », « équilibre la mana base », « plus de
+            ramp », « que des cartes flashy »
+          </span>
+        </label>
+        <textarea
+          value={draft.userPrompt}
+          onChange={(e) => onPromptChange(e.target.value)}
+          rows={2}
+          maxLength={800}
+          placeholder="Décris ce que tu veux vraiment chercher…"
+          className="w-full text-sm bg-dungeon-800 border border-dungeon-600 rounded px-2 py-1.5 text-parchment-100 placeholder:text-parchment-500 focus:outline-none focus:border-arcane-400/60 resize-none"
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div>
+          <span className="text-xs text-parchment-300 mr-2">Rareté&nbsp;:</span>
+          <span className="inline-flex items-center gap-1">
+            {RARITY_OPTIONS.map((opt) => {
+              const active = draft.rarities.includes(opt.value)
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onToggleRarity(opt.value)}
+                  className={cn(
+                    'px-2 py-0.5 text-[11px] rounded border transition-colors',
+                    active
+                      ? 'bg-arcane-500/30 text-arcane-200 border-arcane-400/50'
+                      : 'bg-dungeon-700/40 text-parchment-400 border-dungeon-600 hover:bg-dungeon-700/70'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-parchment-300">Prix max&nbsp;€</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.5"
+            value={draft.priceMax}
+            onChange={(e) => onPriceMaxChange(e.target.value)}
+            placeholder="∞"
+            className="w-20 text-sm bg-dungeon-800 border border-dungeon-600 rounded px-2 py-1 text-parchment-100 placeholder:text-parchment-500 focus:outline-none focus:border-arcane-400/60"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          {hasAnyFilter && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="text-[11px] text-parchment-400 hover:text-parchment-200 underline-offset-2 hover:underline"
+            >
+              Réinitialiser
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onApply}
+            disabled={isPending || !dirty}
+            className={cn(
+              'text-xs px-3 py-1 rounded border transition-colors',
+              dirty && !isPending
+                ? 'bg-arcane-500/40 text-arcane-100 border-arcane-400/60 hover:bg-arcane-500/60'
+                : 'bg-dungeon-700/40 text-parchment-500 border-dungeon-600 cursor-not-allowed'
+            )}
+            title="Lance l'analyse avec ces règles (cache séparé par combinaison)"
+          >
+            {isPending ? 'Analyse…' : 'Analyser avec ces règles'}
+          </button>
+        </div>
+      </div>
+    </section>
   )
 }
 
